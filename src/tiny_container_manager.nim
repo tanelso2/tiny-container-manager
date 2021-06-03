@@ -60,9 +60,6 @@ proc createNginxConfig(target: Container) =
   let containerPort = target.localPort
   let x = fmt("""
   server {
-    listen <port> default_server;
-    listen [::]:<port> default_server;
-
     server_name <host>;
     location / {
       proxy_pass http://127.0.0.1:<containerPort>;
@@ -151,4 +148,5 @@ proc testGetConfig() =
 
 when isMainModule:
   #testLoop()
-  testGetConfig()
+  #testGetConfig()
+  mainLoop()
