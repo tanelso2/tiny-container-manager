@@ -1,4 +1,4 @@
-#import yaml.serialization, streams
+import yaml/serialization, streams
 import
   strformat,
   os,
@@ -96,7 +96,44 @@ proc installNginx() =
   echo simpleExec("sudo apt-get update")
   echo simpleExec("sudo apt-get install -y nginx")
 
-when isMainModule:
+proc isConfigFile(filename: string): bool =
+  return true
+
+proc parseContainer(filename: string): Container =
+  var ret: Container
+  var s = newFileStream(filename)
+  load(s, ret)
+  s.close()
+  return ret
+
+
+proc getContainerConfigs(directory: string): seq[Container] =
+  discard directory.existsOrCreateDir
+  var containers: seq[Container] = @[]
+  for path in walkFiles(fmt"{directory}/*"):
+    echo fmt"walking down {path}"
+    if path.isConfigFile():
+      containers.add(path.parseContainer())
+  echo fmt"containers is {containers}"
+  return containers
+
+proc ensureContainer(target: Container) =
+  if not target.isRunning:
+    target.createContainer
+  target.createNginxConfig()
+
+proc mainLoop() =
+  installNginx()
+  installCertbot()
+  let configDir = "/opt/tiny-container-manager"
+  while true:
+    let containers = getContainerConfigs(configDir)
+    for c in containers:
+      c.ensureContainer()
+    discard "sleep 15".simpleExec()
+
+
+proc testLoop() =
   echo "hey hey hey"
   installNginx()
   installCertbot()
@@ -105,7 +142,13 @@ when isMainModule:
   let host = "thomasnelson.me"
   let c2 = Container(name: "tnelson-personal-website", image: image, containerPort: containerPort, host: host)
   echo fmt"{c2.name} is running? {c2.isRunning}"
-  if not c2.isRunning:
-    c2.createContainer
-  c2.createNginxConfig()
+  c2.ensureContainer
 
+proc testGetConfig() =
+  echo "Testing reading the config"
+  discard getContainerConfigs("/opt/tiny-capn")
+
+
+when isMainModule:
+  #testLoop()
+  testGetConfig()

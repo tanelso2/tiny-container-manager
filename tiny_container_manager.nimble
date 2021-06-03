@@ -10,4 +10,5 @@ bin           = @["tiny_container_manager"]
 
 # Dependencies
 
-requires "nim >= 1.4.2"
+requires "nim >= 1.4.2", "yaml >= 0.15.0"
+
