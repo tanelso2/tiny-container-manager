@@ -53,6 +53,10 @@ proc localPort(target: Container): int =
     if word.contains("0.0.0.0"):
       return word.split("->")[0].split("0.0.0.0:")[1].parseInt()
 
+proc restartNginx() =
+  let restartNginxCmd = fmt"systemctl restart nginx"
+  echo restartNginxCmd
+  echo restartNginxCmd.simpleExec()
 
 proc createNginxConfig(target: Container) =
   let port = 80
@@ -72,14 +76,16 @@ proc createNginxConfig(target: Container) =
   let enabledFile = fmt"/etc/nginx/sites-enabled/{target.name}"
   if not enabledFile.symlinkExists:
     createSymlink(filename, enabledFile)
-  let restartNginxCmd = fmt"systemctl restart nginx"
-  echo restartNginxCmd
-  echo restartNginxCmd.simpleExec()
-  let certbotCmd = fmt"certbot run --nginx -n --keep --domains {target.host} --email {email} --agree-tos"
+  restartNginx()
+
+proc runCertbot(containers: seq[Container]) =
+  var domainFlags = ""
+  let domains = containers.map(proc(c: Container): string = c.host)
+  let domainsWithFlags = domains.map((x) => fmt"-d {x}")
+  let d = domainsWithFlags.join(" ")
+  let certbotCmd = fmt"certbot run --nginx -n --keep {d} --email {email} --agree-tos"
   echo certbotCmd
   echo certbotCmd.simpleExec()
-  echo restartNginxCmd
-  echo restartNginxCmd.simpleExec()
 
 proc installSnap() =
   echo simpleExec("sudo snap install core")
@@ -127,6 +133,7 @@ proc mainLoop() =
     let containers = getContainerConfigs(configDir)
     for c in containers:
       c.ensureContainer()
+    runCertbot(containers)
     discard "sleep 15".simpleExec()
 
 
