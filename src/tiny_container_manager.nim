@@ -75,7 +75,7 @@ proc createNginxConfig(target: Container) =
   let restartNginxCmd = fmt"systemctl restart nginx"
   echo restartNginxCmd
   echo restartNginxCmd.simpleExec()
-  let certbotCmd = fmt"certbot run --nginx -n --domains {target.host} --email {email} --agree-tos"
+  let certbotCmd = fmt"certbot run --nginx -n --keep --domains {target.host} --email {email} --agree-tos"
   echo certbotCmd
   echo certbotCmd.simpleExec()
   echo restartNginxCmd
