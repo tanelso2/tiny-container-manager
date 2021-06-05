@@ -3,7 +3,9 @@ import
   strformat,
   os,
   osproc,
-  strutils
+  strutils,
+  sequtils,
+  sugar
 # This is just an example to get you started. A typical binary package
 # uses this file as the main entry point of the application.
 type
@@ -63,12 +65,11 @@ proc createNginxConfig(target: Container) =
   let host = target.host
   let containerPort = target.localPort
   let x = fmt("""
-  http {
-    server {
-      server_name <host>;
-      location / {
-        proxy_pass http://127.0.0.1:<containerPort>;
-      }
+  server {
+    listen 80 default_server;
+    server_name <host>;
+    location / {
+      proxy_pass http://127.0.0.1:<containerPort>;
     }
   }
   """, '<', '>')
