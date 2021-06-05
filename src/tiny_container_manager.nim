@@ -66,8 +66,11 @@ proc createNginxConfig(target: Container) =
   let containerPort = target.localPort
   let x = fmt("""
   server {
-    listen 80 default_server;
+    listen 0.0.0.0:80;
+    listen [::]:80;
+
     server_name <host>;
+
     location / {
       proxy_pass http://127.0.0.1:<containerPort>;
     }
