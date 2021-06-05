@@ -84,7 +84,7 @@ proc createNginxConfig(target: Container) =
     createSymlink(filename, enabledFile)
   restartNginx()
 
-proc runCertbot(containers: seq[Container]) =
+proc runCertbotForAll(containers: seq[Container]) =
   var domainFlags = ""
   let domains = containers.map(proc(c: Container): string = c.host)
   let domainsWithFlags = domains.map((x) => fmt"-d {x}")
@@ -126,10 +126,17 @@ proc getContainerConfigs(directory: string): seq[Container] =
   echo fmt"containers is {containers}"
   return containers
 
+proc runCertbot(target: Container) =
+  let certbotCmd = fmt"certbot run --nginx -n --keep -d {target.host} --email {email} --agree-tos"
+  echo certbotCmd
+  echo certbotCmd.simpleExec()
+
+
 proc ensureContainer(target: Container) =
   if not target.isRunning:
     target.createContainer
   target.createNginxConfig()
+  target.runCertbot()
 
 proc mainLoop() =
   installNginx()
@@ -139,8 +146,8 @@ proc mainLoop() =
     let containers = getContainerConfigs(configDir)
     for c in containers:
       c.ensureContainer()
-    runCertbot(containers)
-    discard "sleep 15".simpleExec()
+    #runCertbotForAll(containers)
+    echo "sleep 15".simpleExec()
 
 
 proc testLoop() =
