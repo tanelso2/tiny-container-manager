@@ -63,10 +63,12 @@ proc createNginxConfig(target: Container) =
   let host = target.host
   let containerPort = target.localPort
   let x = fmt("""
-  server {
-    server_name <host>;
-    location / {
-      proxy_pass http://127.0.0.1:<containerPort>;
+  http {
+    server {
+      server_name <host>;
+      location / {
+        proxy_pass http://127.0.0.1:<containerPort>;
+      }
     }
   }
   """, '<', '>')
