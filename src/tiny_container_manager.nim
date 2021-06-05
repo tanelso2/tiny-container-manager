@@ -20,7 +20,13 @@ let email = "tanelso2@gmail.com"
 proc runInShell(x: openArray[string]): string =
   let process = x[0]
   let args = x[1..^1]
-  return execProcess(process, args=args, options={poUsePath}).strip
+  let p = startProcess(process, args=args, options={poUsePath})
+  defer: p.close()
+  let exitCode = p.waitForExit()
+  if exitCode != 0:
+    echo "Heya, that failed"
+  return p.outputStream().readAll()
+
 
 proc simpleExec(command: string): string = command.split.runInShell
 
