@@ -13,6 +13,7 @@ proc runInShell*(x: openArray[string]): string =
   let exitCode = p.waitForExit()
   if exitCode != 0:
     echo "Heya, that failed"
+    echo p.errorStream().readAll()
   return p.outputStream().readAll()
 
 
