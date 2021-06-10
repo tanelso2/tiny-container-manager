@@ -38,3 +38,11 @@ proc restartNginx*() =
   let restartNginxCmd = fmt"systemctl restart nginx"
   echo restartNginxCmd
   echo restartNginxCmd.simpleExec()
+
+proc setupFirewall*() =
+  echo simpleExec("sudo ufw default deny incoming")
+  echo simpleExec("sudo ufw default allow outgoing")
+  echo simpleExec("sudo ufw allow ssh")
+  echo simpleExec("sudo ufw allow http")
+  echo simpleExec("sudo ufw allow https")
+  echo simpleExec("sudo ufw enable")

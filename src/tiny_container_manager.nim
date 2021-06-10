@@ -38,6 +38,7 @@ proc getContainerConfigs(directory: string): seq[Container] =
 proc mainLoop() =
   installNginx()
   installCertbot()
+  setupFirewall()
   let configDir = "/opt/tiny-container-manager"
   while true:
     let containers = getContainerConfigs(configDir)
