@@ -47,16 +47,14 @@ proc mainLoop() =
     echo "sleep 15".simpleExec()
 
 
-# proc testLoop() =
-#   echo "hey hey hey"
-#   installNginx()
-#   installCertbot()
-#   let image = "gcr.io/kubernetes-221218/personal-website:travis-9a64ae5"
-#   let containerPort = 80
-#   let host = "thomasnelson.me"
-#   let c2 = Container(name: "tnelson-personal-website", image: image, containerPort: containerPort, host: host)
-#   echo fmt"{c2.name} is running? {c2.isRunning}"
-#   c2.ensureContainer
+proc testLoop() =
+  echo "hey hey hey"
+  let image = "gcr.io/kubernetes-221218/personal-website:travis-9a64ae5"
+  let containerPort = 80
+  let host = "thomasnelson.me"
+  let c2 = Container(name: "tnelson-personal-website", image: image, containerPort: containerPort, host: host)
+  echo fmt"{c2.name} is running? {c2.isHealthy}"
+  c2.ensureContainer
 
 # proc testGetConfig() =
 #   echo "Testing reading the config"
@@ -65,4 +63,5 @@ proc mainLoop() =
 when isMainModule:
   #testLoop()
   #testGetConfig()
-  mainLoop()
+  testLoop()
+  #mainLoop()

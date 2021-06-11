@@ -1,5 +1,6 @@
-import 
+import
   ./shell_utils,
+  ./docker,
   os,
   sequtils,
   streams,
@@ -17,11 +18,20 @@ type
 
 let email = "tanelso2@gmail.com"
 
+proc matches(target: Container, d: DContainer): bool =
+  # Names are prefaced by a slash due to docker internals
+  # https://github.com/moby/moby/issues/6705
+  let nameMatch = d.Names.contains(fmt"/{target.name}")
+  let imageMatch = d.Image == target.image
+
+  return nameMatch and imageMatch
+
 proc allHosts(target: Container): seq[string] =
   return @[target.host, fmt"www.{target.host}"]
 
-proc createContainer(target: Container) =
+proc createContainer*(target: Container) =
   # TODO: check if running
+  discard simpleExec(fmt"docker rm {target.name}")
   let pullCmd = fmt"docker pull {target.image}"
   echo pullCmd
   echo pullCmd.simpleExec()
@@ -30,21 +40,18 @@ proc createContainer(target: Container) =
   echo cmd
   echo cmd.simpleExec()
 
-proc localPort(target: Container): int =
-  let containers = "docker container ls".simpleExec
-  proc findline(): string =
-    for line in containers.split("\n")[1..^1]:
-      if line.contains(target.name):
-        return line
-  let targetLine = findline()
-  for word in targetLine.split(" "):
-    if word.contains("0.0.0.0"):
-      return word.split("->")[0].split("0.0.0.0:")[1].parseInt()
+proc getRunningContainer(target: Container): DContainer =
+  let containers = getContainers()
+  return containers.filterIt(target.matches(it))[0]
 
-proc isRunning*(target: Container): bool =
-  let containers = "docker container ls".simpleExec
-  for line in containers.split("\n")[1..^1]:
-    if line.contains(target.name):
+proc localPort*(target: Container): int =
+  let c = target.getRunningContainer()
+  return c.Ports[0].PublicPort
+
+proc isHealthy*(target: Container): bool =
+  let containers = getContainers()
+  for c in containers:
+    if target.matches(c):
       return true
   return false
 
@@ -88,7 +95,7 @@ proc runCertbot(target: Container) =
 
 
 proc ensureContainer*(target: Container) =
-  if not target.isRunning:
+  if not target.isHealthy:
     target.createContainer
   target.createNginxConfig()
   target.runCertbot()
