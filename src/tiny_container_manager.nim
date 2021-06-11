@@ -63,5 +63,5 @@ proc testLoop() =
 when isMainModule:
   #testLoop()
   #testGetConfig()
-  testLoop()
-  #mainLoop()
+  #testLoop()
+  mainLoop()
