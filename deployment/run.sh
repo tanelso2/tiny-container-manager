@@ -1,5 +1,4 @@
 #!/bin/bash -x
 
-source ~/.bashrc
-
+export PATH=/root/.nimble/bin:$PATH
 nimble run
