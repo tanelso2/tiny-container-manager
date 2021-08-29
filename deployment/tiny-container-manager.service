@@ -6,6 +6,7 @@ Type=simple
 Restart=always
 WorkingDirectory=/root/tiny-container-manager
 ExecStart=/root/tiny-container-manager/deployment/run.sh
+User=root
 
 [Install]
 WantedBy=multi-user.target

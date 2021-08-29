@@ -3,13 +3,8 @@ import
   json,
   net,
   strutils,
-  strformat
-
-type
-  DPort* = object
-    PrivatePort*: int
-    PublicPort*: int
-    Type*: string
+  strformat,
+  tables
 
 type
   DContainer* = object
@@ -17,6 +12,14 @@ type
     Image*: string
     Ports*: seq[DPort]
     Names*: seq[string]
+  DPort* = object
+    PrivatePort*: int
+    PublicPort*: int
+    Type*: string
+
+type
+  Headers* = Table[string, string]
+
 
 let dockerSocketFile = "/var/run/docker.sock"
 let dockerSocketUrl = "unix:///var/run/docker.sock"
@@ -25,10 +28,31 @@ proc getDockerSocket(): Socket =
   result = newSocket(AF_UNIX, SOCK_STREAM, IPPROTO_IP)
   result.connectUnix(dockerSocketFile)
 
-proc makeRequest(s: Socket, httpMethod = "GET", path = "/", timeout = 10_000): JsonNode =
-  let headerString = &"{httpMethod} {path} HTTP/1.1\c\nConnection: Keep-Alive\c\nHost: unix\c\n\c\n"
-  s.send(headerString)
+proc makeHeaderString(h: Headers): string =
+  let requiredHeaders: Headers = {"Connection": "Keep-Alive", "Host": "unix"}.toTable
+  result = ""
+  for k,v in h.pairs:
+    result.add(&"{k}: {v}\c\n")
+  for k,v in requiredHeaders.pairs:
+    result.add(&"{k}: {v}\c\n")
 
+let httpNewline = "\c\n"
+
+proc emptyHeaders(): Headers = initTable[string,string]()
+
+proc makeRequest(s: Socket, headers = emptyHeaders(), body: JsonNode = nil, httpMethod = "GET", path = "/", timeout = 10_000): JsonNode =
+  let introString = &"{httpMethod} {path} HTTP/1.1\c\n"
+  s.send(introString)
+  let headerString = headers.makeHeaderString()
+  # if body == nil:
+  #   echo "NIL NIL NIL"
+  # echo &"headerString is {headerString}"
+  s.send(headerString)
+  s.send(httpNewline)
+  # TODO: POST bodys?
+  #
+  #
+  # Start receive
   let httpLine = s.recvLine(timeout)
   let statusCode = httpLine.split(" ")[1]
   # TODO: Headers and error handling
@@ -57,6 +81,10 @@ proc makeRequest(s: Socket, httpMethod = "GET", path = "/", timeout = 10_000): J
 proc getContainers*(): seq[DContainer] =
   let resJson = makeRequest(getDockerSocket(), path = "/containers/json")
   return to(resJson, seq[DContainer])
+
+proc getContainer*(name: string): DContainer =
+  let resJson = makeRequest(getDockerSocket(), path = &"/containers/{name}/json")
+  return to(resJson, DContainer)
 
 proc main() =
   let socket = getDockerSocket()
