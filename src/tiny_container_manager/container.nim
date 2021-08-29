@@ -93,7 +93,7 @@ proc runCertbot(target: Container) =
   echo certbotCmd
   echo certbotCmd.simpleExec()
 
-proc isNginxConfigCorrect(target: Container) =
+proc isNginxConfigCorrect(target: Container): bool =
   echo "TODO IMPL ME"
   return true
 
