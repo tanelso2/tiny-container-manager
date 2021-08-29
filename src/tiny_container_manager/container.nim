@@ -93,9 +93,13 @@ proc runCertbot(target: Container) =
   echo certbotCmd
   echo certbotCmd.simpleExec()
 
+proc isNginxConfigCorrect(target: Container) =
+  echo "TODO IMPL ME"
+  return true
 
 proc ensureContainer*(target: Container) =
   if not target.isHealthy:
-    target.createContainer
-  target.createNginxConfig()
-  target.runCertbot()
+    echo fmt"{target.name} is not healthy, recreating"
+    target.createContainer()
+    target.createNginxConfig()
+    target.runCertbot()
