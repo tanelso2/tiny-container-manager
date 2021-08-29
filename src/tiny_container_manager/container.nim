@@ -101,5 +101,5 @@ proc ensureContainer*(target: Container) =
   if not target.isHealthy:
     echo fmt"{target.name} is not healthy, recreating"
     target.createContainer()
-    target.createNginxConfig()
-    target.runCertbot()
+  target.createNginxConfig()
+  target.runCertbot()

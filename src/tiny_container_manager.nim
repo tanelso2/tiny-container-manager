@@ -44,7 +44,7 @@ proc mainLoop() =
     let containers = getContainerConfigs(configDir)
     for c in containers:
       c.ensureContainer()
-    echo "sleep 15".simpleExec()
+    echo "sleep 30".simpleExec()
 
 
 proc testLoop() =
