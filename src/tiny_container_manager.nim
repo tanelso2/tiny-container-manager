@@ -1,4 +1,5 @@
 import
+  httpclient,
   strformat,
   os,
   strutils,
@@ -9,6 +10,8 @@ import
 
 
 let email = "tanelso2@gmail.com"
+
+let client = newHttpClient(maxRedirects=0)
 
 proc runCertbotForAll(containers: seq[Container]) =
   var domainFlags = ""
@@ -33,6 +36,17 @@ proc getContainerConfigs(directory: string): seq[Container] =
       containers.add(path.parseContainer())
   echo fmt"containers is {containers}"
   return containers
+
+proc testWebsiteWithCurl(website: string) =
+  let httpUrl = fmt"http://{website}"
+  let httpsUrl = fmt"https://{website}"
+  let httpOut = fmt"curl {httpUrl}".simpleExec()
+  let httpsOut = fmt"curl {httpsUrl}".simpleExec()
+
+
+proc checkDiskUsage() =
+  let x = "df -i".simpleExec()
+  let y: string = x.split("\n").filter(z => z.contains("/dev/vda1"))[0]
 
 
 proc mainLoop() =

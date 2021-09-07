@@ -1,6 +1,7 @@
 import
   ./shell_utils,
   ./docker,
+  httpclient,
   os,
   sequtils,
   streams,
@@ -55,6 +56,21 @@ proc isHealthy*(target: Container): bool =
       return true
   return false
 
+let client = newHttpClient(maxRedirects=0)
+
+proc isWebsiteRunning*(target: Container): bool =
+  let website = target.host
+  let httpUrl = fmt"http://{website}"
+  let httpsUrl = fmt"https://{website}"
+  let httpRet = client.request(httpUrl, httpMethod="GET")
+  let httpsRet = client.request(httpsUrl, httpMethod="GET")
+  let httpWorks = "301" in httpRet.status
+  # httpclient library doesn't check validity of certs right now...
+  # I probably need to implement that
+  let httpsWorks = "200" in httpsRet.status
+  return httpWorks and httpsWorks
+
+
 proc createNginxConfig(target: Container) =
   let port = 80
   let hosts = target.allHosts.join(" ")
@@ -101,5 +117,7 @@ proc ensureContainer*(target: Container) =
   if not target.isHealthy:
     echo fmt"{target.name} is not healthy, recreating"
     target.createContainer()
-  target.createNginxConfig()
-  target.runCertbot()
+  if not target.isWebsiteRunning:
+    target.createNginxConfig()
+    target.runCertbot()
+
