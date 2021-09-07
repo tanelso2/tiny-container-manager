@@ -59,6 +59,7 @@ proc isHealthy*(target: Container): bool =
 let client = newHttpClient(maxRedirects=0)
 
 proc isWebsiteRunning*(target: Container): bool =
+  echo fmt"Checking {target.host}"
   let website = target.host
   let httpUrl = fmt"http://{website}"
   let httpsUrl = fmt"https://{website}"
