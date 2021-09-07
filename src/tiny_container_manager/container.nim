@@ -113,11 +113,17 @@ proc isNginxConfigCorrect(target: Container): bool =
   echo "TODO IMPL ME"
   return true
 
+let ffHttpRequests = false
+
 proc ensureContainer*(target: Container) =
   if not target.isHealthy:
     echo fmt"{target.name} is not healthy, recreating"
     target.createContainer()
-  if not target.isWebsiteRunning:
+  if ffHttpRequests:
+    if not target.isWebsiteRunning:
+      target.createNginxConfig()
+      target.runCertbot()
+  else:
     target.createNginxConfig()
     target.runCertbot()
 
