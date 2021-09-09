@@ -2,10 +2,12 @@ import
   httpclient,
   strformat,
   os,
+  prometheus as prom,
   strutils,
   sequtils,
   sugar,
   tiny_container_manager/container,
+  tiny_container_manager/metrics as metrics,
   tiny_container_manager/shell_utils
 
 
@@ -78,4 +80,6 @@ when isMainModule:
   #testLoop()
   #testGetConfig()
   #testLoop()
-  mainLoop()
+  #mainLoop()
+  metrics.uptimeMetric.labels("blahblah.com").inc()
+  echo metrics.getOutput()

@@ -1,8 +1,10 @@
 import
   ./shell_utils,
   ./docker,
+  ./metrics as metrics,
   httpclient,
   os,
+  prometheus as prom,
   sequtils,
   streams,
   strformat,
@@ -40,6 +42,7 @@ proc createContainer*(target: Container) =
   let cmd = fmt"docker run --name {target.name} -d {portArgs} {target.image}"
   echo cmd
   echo cmd.simpleExec()
+  metrics.containerStarts.labels(target.name).inc()
 
 proc getRunningContainer(target: Container): DContainer =
   let containers = getContainers()
@@ -69,8 +72,11 @@ proc isWebsiteRunning*(target: Container): bool =
   # httpclient library doesn't check validity of certs right now...
   # I probably need to implement that
   let httpsWorks = "200" in httpsRet.status
-  return httpWorks and httpsWorks
-
+  result = httpWorks and httpsWorks
+  metrics
+    .healthCheckStatus
+    .labels(target.host, "http", if result: "success" else: "failure")
+    .inc()
 
 proc createNginxConfig(target: Container) =
   let port = 80
@@ -94,6 +100,7 @@ proc createNginxConfig(target: Container) =
   let enabledFile = fmt"/etc/nginx/sites-enabled/{target.name}"
   if not enabledFile.symlinkExists:
     createSymlink(filename, enabledFile)
+  metrics.nginxConfigsWritten.labels(target.name).inc()
   restartNginx()
 
 proc parseContainer*(filename: string): Container =
@@ -109,6 +116,7 @@ proc runCertbot(target: Container) =
   let certbotCmd = fmt"certbot run --nginx -n --keep {hostCmdLine} --email {email} --agree-tos"
   echo certbotCmd
   echo certbotCmd.simpleExec()
+  metrics.letsEncryptRuns.labels(target.name).inc()
 
 proc isNginxConfigCorrect(target: Container): bool =
   echo "TODO IMPL ME"
