@@ -1,4 +1,6 @@
 import
+  asynchttpserver,
+  asyncdispatch,
   httpclient,
   strformat,
   os,
@@ -9,7 +11,6 @@ import
   tiny_container_manager/container,
   tiny_container_manager/metrics as metrics,
   tiny_container_manager/shell_utils
-
 
 let email = "tanelso2@gmail.com"
 
@@ -25,9 +26,7 @@ proc runCertbotForAll(containers: seq[Container]) =
   echo certbotCmd.simpleExec()
 
 proc isConfigFile(filename: string): bool =
-  # TODO
-  return true
-
+  result = filename.endsWith(".yaml") or filename.endsWith(".yml")
 
 proc getContainerConfigs(directory: string): seq[Container] =
   discard directory.existsOrCreateDir
@@ -52,6 +51,7 @@ proc checkDiskUsage() =
 
 
 proc mainLoop() =
+  echo "Starting loop"
   installNginx()
   installCertbot()
   setupFirewall()
@@ -75,11 +75,23 @@ proc testLoop() =
 # proc testGetConfig() =
 #   echo "Testing reading the config"
 #   discard getContainerConfigs("/opt/tiny-capn")
+#
+#
+proc main() =
+  var loopThread: Thread[void]
+  createThread(loopThread, mainLoop)
+
+  while true:
+    echo "hello from other thread"
+    echo "sleep 5".simpleExec()
+  # Running the webserver on the same async dispatch loop seems
+  # risky? Especially because I don't think my shell_utils are async safe
+
 
 when isMainModule:
   #testLoop()
   #testGetConfig()
   #testLoop()
-  #mainLoop()
-  metrics.uptimeMetric.labels("blahblah.com").inc()
-  echo metrics.getOutput()
+  main()
+  # metrics.uptimeMetric.labels("blahblah.com").inc()
+  # echo metrics.getOutput()

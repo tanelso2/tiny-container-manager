@@ -1,4 +1,5 @@
 import
+  locks,
   prometheus as prom
 
 var uptimeMetric* = prom.newCounter(
