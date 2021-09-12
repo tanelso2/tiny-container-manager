@@ -35,6 +35,8 @@ proc allHosts(target: Container): seq[string] =
 
 proc createContainer*(target: Container) {.async.} =
   # TODO: check if running
+  let stopCmd = fmt"docker stop {target.name}"
+  discard await stopCmd.asyncExec()
   let rmCmd = fmt"docker rm {target.name}"
   discard await rmCmd.asyncExec()
   let pullCmd = fmt"docker pull {target.image}"
