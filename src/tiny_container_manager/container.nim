@@ -58,8 +58,14 @@ proc isHealthy*(target: Container): bool =
   let containers = getContainers()
   for c in containers:
     if target.matches(c):
-      return true
-  return false
+      result = true
+    else:
+      result = false
+  {.gcsafe.}:
+    metrics
+      .healthCheckStatus
+      .labels(target.host, "docker", if result: "success" else: "failure")
+      .inc()
 
 # let client = newHttpClient(maxRedirects=0)
 
