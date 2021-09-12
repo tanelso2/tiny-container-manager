@@ -128,7 +128,7 @@ proc isNginxConfigCorrect(target: Container): bool =
   echo "TODO IMPL ME"
   return true
 
-let ffHttpRequests = false
+let ffHttpRequests = true
 
 proc ensureContainer*(target: Container) {.async.} =
   if not target.isHealthy:
