@@ -50,22 +50,28 @@ proc checkDiskUsage() =
   let y: string = x.split("\n").filter(z => z.contains("/dev/vda1"))[0]
 
 
+const loopSeconds = 30
+
+
 proc mainLoop() {.async.} =
   echo "Starting loop"
   await installNginx()
   await installCertbot()
   await setupFirewall()
   let configDir = "/opt/tiny-container-manager"
+  var i = 0
   while true:
     echo await "echo OHBOYHEREWEGOAGAIN".asyncExec()
     metrics.incRuns()
+    {.gcsafe.}: metrics.iters.set(i)
     let containers = getContainerConfigs(configDir)
     for c in containers:
       await c.ensureContainer()
     #TODO: I should find a logger that injects the file,line,and can be configured.
     # Lol or I should write one
     echo "Going to sleep"
-    await sleepAsync(5 * 1000)
+    i+=1
+    await sleepAsync(loopSeconds * 1000)
     #echo "sleep 30".simpleExec()
 
 proc runServer {.async.} =

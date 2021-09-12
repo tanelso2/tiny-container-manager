@@ -6,6 +6,11 @@ var runs = prom.newCounter(
   ""
 )
 
+var iters* = prom.newGauge(
+  "tcm_iterations",
+  ""
+)
+
 proc incRuns*() =
   {.gcsafe.}:
     runs.inc()
