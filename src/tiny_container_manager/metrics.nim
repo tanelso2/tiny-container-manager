@@ -1,6 +1,14 @@
 import
-  locks,
   prometheus as prom
+
+var runs = prom.newCounter(
+  "tcm_runs",
+  ""
+)
+
+proc incRuns*() =
+  {.gcsafe.}:
+    runs.inc()
 
 var uptimeMetric* = prom.newCounter(
   "tcm_uptime",
@@ -20,17 +28,19 @@ var containerStarts* = prom.newCounter(
   @["site"]
 )
 
-var letsEncryptRuns* = prom.newCounter(
+var letsEncryptRuns* {.global.} = prom.newCounter(
   "tcm_letsencrypt_runs",
   "",
   @["site"]
 )
 
-var nginxConfigsWritten* = prom.newCounter(
+var nginxConfigsWritten* {.global.} = prom.newCounter(
   "tcm_nginx_configs",
   "",
   @["site"]
 )
 
 proc getOutput*(): string =
-  return prom.generateLatest()
+  # No idea if actually gcsafe, just want compiler to shut up
+  {.gcsafe.}:
+    return prom.generateLatest()

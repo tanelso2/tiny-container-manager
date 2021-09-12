@@ -2,6 +2,7 @@ import
   ./shell_utils,
   ./docker,
   ./metrics as metrics,
+  asyncdispatch,
   httpclient,
   os,
   prometheus as prom,
@@ -19,7 +20,7 @@ type
     containerPort*: int
     host*: string
 
-let email = "tanelso2@gmail.com"
+const email = "tanelso2@gmail.com"
 
 proc matches(target: Container, d: DContainer): bool =
   # Names are prefaced by a slash due to docker internals
@@ -32,17 +33,18 @@ proc matches(target: Container, d: DContainer): bool =
 proc allHosts(target: Container): seq[string] =
   return @[target.host, fmt"www.{target.host}"]
 
-proc createContainer*(target: Container) =
+proc createContainer*(target: Container) {.async.} =
   # TODO: check if running
-  discard simpleExec(fmt"docker rm {target.name}")
+  let rmCmd = fmt"docker rm {target.name}"
+  discard await rmCmd.asyncExec()
   let pullCmd = fmt"docker pull {target.image}"
   echo pullCmd
-  echo pullCmd.simpleExec()
+  echo await pullCmd.asyncExec()
   let portArgs = fmt"-p {target.containerPort}"
   let cmd = fmt"docker run --name {target.name} -d {portArgs} {target.image}"
   echo cmd
-  echo cmd.simpleExec()
-  metrics.containerStarts.labels(target.name).inc()
+  echo await cmd.asyncExec()
+  {.gcsafe.}: metrics.containerStarts.labels(target.name).inc()
 
 proc getRunningContainer(target: Container): DContainer =
   let containers = getContainers()
@@ -59,9 +61,10 @@ proc isHealthy*(target: Container): bool =
       return true
   return false
 
-let client = newHttpClient(maxRedirects=0)
+# let client = newHttpClient(maxRedirects=0)
 
 proc isWebsiteRunning*(target: Container): bool =
+  let client = newHttpClient(maxRedirects=0)
   echo fmt"Checking {target.host}"
   let website = target.host
   let httpUrl = fmt"http://{website}"
@@ -73,12 +76,13 @@ proc isWebsiteRunning*(target: Container): bool =
   # I probably need to implement that
   let httpsWorks = "200" in httpsRet.status
   result = httpWorks and httpsWorks
-  metrics
-    .healthCheckStatus
-    .labels(target.host, "http", if result: "success" else: "failure")
-    .inc()
+  {.gcsafe.}:
+    metrics
+      .healthCheckStatus
+      .labels(target.host, "http", if result: "success" else: "failure")
+      .inc()
 
-proc createNginxConfig(target: Container) =
+proc createNginxConfig(target: Container) {.async.} =
   let port = 80
   let hosts = target.allHosts.join(" ")
   let containerPort = target.localPort
@@ -100,23 +104,25 @@ proc createNginxConfig(target: Container) =
   let enabledFile = fmt"/etc/nginx/sites-enabled/{target.name}"
   if not enabledFile.symlinkExists:
     createSymlink(filename, enabledFile)
-  metrics.nginxConfigsWritten.labels(target.name).inc()
-  restartNginx()
+  {.gcsafe.}: metrics.nginxConfigsWritten.labels(target.name).inc()
+  await restartNginx()
 
 proc parseContainer*(filename: string): Container =
-  var ret: Container
-  var s = newFileStream(filename)
-  load(s, ret)
-  s.close()
-  return ret
+  {.gcsafe.}:
+    var ret: Container
+    var s = newFileStream(filename)
+    load(s, ret)
+    s.close()
+    return ret
 
-proc runCertbot(target: Container) =
+proc runCertbot(target: Container) {.async.} =
   let allHosts = target.allHosts()
   let hostCmdLine = allHosts.map((x) => fmt"-d {x}").join(" ")
   let certbotCmd = fmt"certbot run --nginx -n --keep {hostCmdLine} --email {email} --agree-tos"
   echo certbotCmd
-  echo certbotCmd.simpleExec()
-  metrics.letsEncryptRuns.labels(target.name).inc()
+  echo await certbotCmd.asyncExec()
+  {.gcsafe.}: metrics.letsEncryptRuns.labels(target.name).inc()
+  # metrics.incLetsEncryptRuns(@[target.name])
 
 proc isNginxConfigCorrect(target: Container): bool =
   echo "TODO IMPL ME"
@@ -124,15 +130,15 @@ proc isNginxConfigCorrect(target: Container): bool =
 
 let ffHttpRequests = false
 
-proc ensureContainer*(target: Container) =
+proc ensureContainer*(target: Container) {.async.} =
   if not target.isHealthy:
     echo fmt"{target.name} is not healthy, recreating"
-    target.createContainer()
+    await target.createContainer()
   if ffHttpRequests:
     if not target.isWebsiteRunning:
-      target.createNginxConfig()
-      target.runCertbot()
+      await target.createNginxConfig()
+      await target.runCertbot()
   else:
-    target.createNginxConfig()
-    target.runCertbot()
+    await target.createNginxConfig()
+    await target.runCertbot()
 

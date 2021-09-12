@@ -21,8 +21,8 @@ type
   Headers* = Table[string, string]
 
 
-let dockerSocketFile = "/var/run/docker.sock"
-let dockerSocketUrl = "unix:///var/run/docker.sock"
+const dockerSocketFile = "/var/run/docker.sock"
+const dockerSocketUrl = "unix:///var/run/docker.sock"
 
 proc getDockerSocket(): Socket =
   result = newSocket(AF_UNIX, SOCK_STREAM, IPPROTO_IP)
@@ -36,7 +36,7 @@ proc makeHeaderString(h: Headers): string =
   for k,v in requiredHeaders.pairs:
     result.add(&"{k}: {v}\c\n")
 
-let httpNewline = "\c\n"
+const httpNewline = "\c\n"
 
 proc emptyHeaders(): Headers = initTable[string,string]()
 

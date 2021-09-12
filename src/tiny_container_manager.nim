@@ -50,27 +50,35 @@ proc checkDiskUsage() =
   let y: string = x.split("\n").filter(z => z.contains("/dev/vda1"))[0]
 
 
-proc mainLoop() =
+proc mainLoop() {.async.} =
   echo "Starting loop"
-  installNginx()
-  installCertbot()
-  setupFirewall()
+  await installNginx()
+  await installCertbot()
+  await setupFirewall()
   let configDir = "/opt/tiny-container-manager"
   while true:
+    echo await "echo OHBOYHEREWEGOAGAIN".asyncExec()
+    metrics.incRuns()
     let containers = getContainerConfigs(configDir)
     for c in containers:
-      c.ensureContainer()
-    echo "sleep 30".simpleExec()
+      await c.ensureContainer()
+    #TODO: I should find a logger that injects the file,line,and can be configured.
+    # Lol or I should write one
+    echo "Going to sleep"
+    await sleepAsync(5 * 1000)
+    #echo "sleep 30".simpleExec()
 
-
-proc testLoop() =
-  echo "hey hey hey"
-  let image = "gcr.io/kubernetes-221218/personal-website:travis-9a64ae5"
-  let containerPort = 80
-  let host = "thomasnelson.me"
-  let c2 = Container(name: "tnelson-personal-website", image: image, containerPort: containerPort, host: host)
-  echo fmt"{c2.name} is running? {c2.isHealthy}"
-  c2.ensureContainer
+proc runServer {.async.} =
+  var server = newAsyncHttpServer()
+  proc cb(req: Request) {.async.} =
+    let headers = {"Content-Type": "text/plain"}
+    await req.respond(Http200, metrics.getOutput(), headers.newHttpHeaders())
+  server.listen Port(6969)
+  while true:
+    if server.shouldAcceptRequest():
+      await server.acceptRequest(cb)
+    else:
+      poll()
 
 # proc testGetConfig() =
 #   echo "Testing reading the config"
@@ -78,20 +86,16 @@ proc testLoop() =
 #
 #
 proc main() =
-  var loopThread: Thread[void]
-  createThread(loopThread, mainLoop)
+  asyncCheck mainLoop()
+  asyncCheck runServer()
 
-  while true:
-    echo "hello from other thread"
-    echo "sleep 5".simpleExec()
+  runForever()
+
   # Running the webserver on the same async dispatch loop seems
   # risky? Especially because I don't think my shell_utils are async safe
 
 
 when isMainModule:
-  #testLoop()
-  #testGetConfig()
-  #testLoop()
   main()
   # metrics.uptimeMetric.labels("blahblah.com").inc()
   # echo metrics.getOutput()
