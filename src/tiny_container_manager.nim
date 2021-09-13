@@ -38,13 +38,6 @@ proc getContainerConfigs(directory: string): seq[Container] =
   echo fmt"containers is {containers}"
   return containers
 
-proc testWebsiteWithCurl(website: string) =
-  let httpUrl = fmt"http://{website}"
-  let httpsUrl = fmt"https://{website}"
-  let httpOut = fmt"curl {httpUrl}".simpleExec()
-  let httpsOut = fmt"curl {httpsUrl}".simpleExec()
-
-
 proc checkDiskUsage() =
   let x = "df -i".simpleExec()
   let y: string = x.split("\n").filter(z => z.contains("/dev/vda1"))[0]
@@ -86,22 +79,23 @@ proc runServer {.async.} =
     else:
       poll()
 
-# proc testGetConfig() =
-#   echo "Testing reading the config"
-#   discard getContainerConfigs("/opt/tiny-capn")
-#
-#
 proc main() =
   asyncCheck mainLoop()
   asyncCheck runServer()
 
   runForever()
 
-  # Running the webserver on the same async dispatch loop seems
-  # risky? Especially because I don't think my shell_utils are async safe
-
+proc test() =
+  for _ in 1..10:
+    let c1 = Container(name: "test", image: "", containerPort: 9090, host: "thomasnelson.me")
+    echo c1.isWebsiteRunning()
+    let c2 = Container(name: "test", image: "", containerPort: 9090, host: "findmythesis.com")
+    echo c2.isWebsiteRunning()
+    let c3 = Container(name: "test", image: "", containerPort: 9090, host: "pureinvaders.com")
+    echo c3.isWebsiteRunning()
 
 when isMainModule:
+  # test()
   main()
   # metrics.uptimeMetric.labels("blahblah.com").inc()
   # echo metrics.getOutput()

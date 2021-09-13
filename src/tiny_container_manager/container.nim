@@ -85,12 +85,8 @@ proc isWebsiteRunning*(target: Container): bool =
     # I probably need to implement that
     let httpsWorks = "200" in httpsRet.status
     result = httpWorks and httpsWorks
-    {.gcsafe.}:
-      metrics
-        .healthCheckStatus
-        .labels(target.host, "http", if result: "success" else: "failure")
-        .inc()
   except:
+    echo getCurrentExceptionMsg()
     result = false
   finally:
     {.gcsafe.}:
