@@ -72,23 +72,32 @@ proc isHealthy*(target: Container): bool =
 # let client = newHttpClient(maxRedirects=0)
 
 proc isWebsiteRunning*(target: Container): bool =
-  let client = newHttpClient(maxRedirects=0)
-  echo fmt"Checking {target.host}"
-  let website = target.host
-  let httpUrl = fmt"http://{website}"
-  let httpsUrl = fmt"https://{website}"
-  let httpRet = client.request(httpUrl, httpMethod="GET")
-  let httpsRet = client.request(httpsUrl, httpMethod="GET")
-  let httpWorks = "301" in httpRet.status
-  # httpclient library doesn't check validity of certs right now...
-  # I probably need to implement that
-  let httpsWorks = "200" in httpsRet.status
-  result = httpWorks and httpsWorks
-  {.gcsafe.}:
-    metrics
-      .healthCheckStatus
-      .labels(target.host, "http", if result: "success" else: "failure")
-      .inc()
+  try:
+    let client = newHttpClient(maxRedirects=0)
+    echo fmt"Checking {target.host}"
+    let website = target.host
+    let httpUrl = fmt"http://{website}"
+    let httpsUrl = fmt"https://{website}"
+    let httpRet = client.request(httpUrl, httpMethod="GET")
+    let httpsRet = client.request(httpsUrl, httpMethod="GET")
+    let httpWorks = "301" in httpRet.status
+    # httpclient library doesn't check validity of certs right now...
+    # I probably need to implement that
+    let httpsWorks = "200" in httpsRet.status
+    result = httpWorks and httpsWorks
+    {.gcsafe.}:
+      metrics
+        .healthCheckStatus
+        .labels(target.host, "http", if result: "success" else: "failure")
+        .inc()
+  except:
+    result = false
+  finally:
+    {.gcsafe.}:
+      metrics
+        .healthCheckStatus
+        .labels(target.host, "http", if result: "success" else: "failure")
+        .inc()
 
 proc createNginxConfig(target: Container) {.async.} =
   let port = 80
@@ -139,6 +148,7 @@ proc isNginxConfigCorrect(target: Container): bool =
 let ffHttpRequests = false
 
 proc ensureContainer*(target: Container) {.async.} =
+  discard target.isWebsiteRunning()
   if not target.isHealthy:
     echo fmt"{target.name} is not healthy, recreating"
     await target.createContainer()
