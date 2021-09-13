@@ -4,6 +4,7 @@ import
   ./metrics as metrics,
   asyncdispatch,
   httpclient,
+  logging,
   os,
   prometheus as prom,
   sequtils,
@@ -21,6 +22,8 @@ type
     host*: string
 
 const email = "tanelso2@gmail.com"
+
+var logger = newConsoleLogger(fmtStr="[$time] - $levelname: ")
 
 proc matches(target: Container, d: DContainer): bool =
   # Names are prefaced by a slash due to docker internals
@@ -70,23 +73,24 @@ proc isHealthy*(target: Container): bool =
       .inc()
 
 # let client = newHttpClient(maxRedirects=0)
+#
 
 proc isWebsiteRunning*(target: Container): bool =
   try:
     let client = newHttpClient(maxRedirects=0)
-    echo fmt"Checking {target.host}"
+    logger.log(lvlInfo, fmt"Checking {target.host}")
     let website = target.host
     let httpUrl = fmt"http://{website}"
     let httpsUrl = fmt"https://{website}"
     let httpRet = client.request(httpUrl, httpMethod="GET")
+    # This check seems to throw exceptions every once in a while because of cert errors...
+    # So while httpclient library says it doesn't check validity, it seems to be attempting to...
     let httpsRet = client.request(httpsUrl, httpMethod="GET")
     let httpWorks = "301" in httpRet.status
-    # httpclient library doesn't check validity of certs right now...
-    # I probably need to implement that
     let httpsWorks = "200" in httpsRet.status
     result = httpWorks and httpsWorks
   except:
-    echo getCurrentExceptionMsg()
+    logger.log(lvlError, getCurrentExceptionMsg())
     result = false
   finally:
     {.gcsafe.}:
@@ -141,12 +145,14 @@ proc isNginxConfigCorrect(target: Container): bool =
   echo "TODO IMPL ME"
   return true
 
+# Set to false, trying to figure out what
+# causes isWebsiteRunning() to randomly fail
 let ffHttpRequests = false
 
 proc ensureContainer*(target: Container) {.async.} =
   discard target.isWebsiteRunning()
   if not target.isHealthy:
-    echo fmt"{target.name} is not healthy, recreating"
+    logger.log(lvlInfo, fmt"{target.name} is not healthy, recreating")
     await target.createContainer()
   if ffHttpRequests:
     if not target.isWebsiteRunning:

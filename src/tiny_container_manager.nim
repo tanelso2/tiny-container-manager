@@ -2,6 +2,7 @@ import
   asynchttpserver,
   asyncdispatch,
   httpclient,
+  logging,
   strformat,
   os,
   prometheus as prom,
@@ -15,6 +16,8 @@ import
 let email = "tanelso2@gmail.com"
 
 let client = newHttpClient(maxRedirects=0)
+
+var logger = newConsoleLogger(fmtStr="[$time] - $levelname: ")
 
 proc runCertbotForAll(containers: seq[Container]) =
   var domainFlags = ""
@@ -32,10 +35,10 @@ proc getContainerConfigs(directory: string): seq[Container] =
   discard directory.existsOrCreateDir
   var containers: seq[Container] = @[]
   for path in walkFiles(fmt"{directory}/*"):
-    echo fmt"walking down {path}"
+    logger.log(lvlInfo, fmt"walking down {path}")
     if path.isConfigFile():
       containers.add(path.parseContainer())
-  echo fmt"containers is {containers}"
+  logger.log(lvlInfo, fmt"containers is {containers}")
   return containers
 
 proc checkDiskUsage() =
@@ -54,7 +57,6 @@ proc mainLoop() {.async.} =
   let configDir = "/opt/tiny-container-manager"
   var i = 0
   while true:
-    echo await "echo OHBOYHEREWEGOAGAIN".asyncExec()
     metrics.incRuns()
     {.gcsafe.}: metrics.iters.set(i)
     let containers = getContainerConfigs(configDir)
@@ -62,7 +64,7 @@ proc mainLoop() {.async.} =
       await c.ensureContainer()
     #TODO: I should find a logger that injects the file,line,and can be configured.
     # Lol or I should write one
-    echo "Going to sleep"
+    logger.log(lvlInfo, "Going to sleep")
     i+=1
     await sleepAsync(loopSeconds * 1000)
     #echo "sleep 30".simpleExec()
