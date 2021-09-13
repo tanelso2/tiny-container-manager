@@ -58,11 +58,11 @@ proc localPort*(target: Container): int =
 
 proc isHealthy*(target: Container): bool =
   let containers = getContainers()
+  var found = false
   for c in containers:
     if target.matches(c):
-      result = true
-    else:
-      result = false
+      found = true
+  result = found
   {.gcsafe.}:
     metrics
       .healthCheckStatus
