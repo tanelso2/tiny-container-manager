@@ -46,6 +46,12 @@ var nginxConfigsWritten* {.global.} = prom.newCounter(
 )
 
 proc getOutput*(): string =
+  #
   # No idea if actually gcsafe, just want compiler to shut up
+  #
+  # If I'm worried about thread safety of the metrics variables,
+  # maybe I should switch to using a gc strategy that has a shared heap?
+  # https://nim-lang.org/docs/gc.html
+  #
   {.gcsafe.}:
     return prom.generateLatest()
