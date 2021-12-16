@@ -1,8 +1,12 @@
 import
   ./shell_utils,
   ./docker,
+  ./metrics as metrics,
+  asyncdispatch,
   httpclient,
+  logging,
   os,
+  prometheus as prom,
   sequtils,
   streams,
   strformat,
@@ -17,7 +21,9 @@ type
     containerPort*: int
     host*: string
 
-let email = "tanelso2@gmail.com"
+const email = "tanelso2@gmail.com"
+
+var logger = newConsoleLogger(fmtStr="[$time] - $levelname: ")
 
 proc matches(target: Container, d: DContainer): bool =
   # Names are prefaced by a slash due to docker internals
@@ -30,16 +36,20 @@ proc matches(target: Container, d: DContainer): bool =
 proc allHosts(target: Container): seq[string] =
   return @[target.host, fmt"www.{target.host}"]
 
-proc createContainer*(target: Container) =
+proc createContainer*(target: Container) {.async.} =
   # TODO: check if running
-  discard simpleExec(fmt"docker rm {target.name}")
+  let stopCmd = fmt"docker stop {target.name}"
+  discard await stopCmd.asyncExec()
+  let rmCmd = fmt"docker rm {target.name}"
+  discard await rmCmd.asyncExec()
   let pullCmd = fmt"docker pull {target.image}"
   echo pullCmd
-  echo pullCmd.simpleExec()
+  echo await pullCmd.asyncExec()
   let portArgs = fmt"-p {target.containerPort}"
   let cmd = fmt"docker run --name {target.name} -d {portArgs} {target.image}"
   echo cmd
-  echo cmd.simpleExec()
+  echo await cmd.asyncExec()
+  {.gcsafe.}: metrics.containerStarts.labels(target.name).inc()
 
 proc getRunningContainer(target: Container): DContainer =
   let containers = getContainers()
@@ -51,28 +61,45 @@ proc localPort*(target: Container): int =
 
 proc isHealthy*(target: Container): bool =
   let containers = getContainers()
+  var found = false
   for c in containers:
     if target.matches(c):
-      return true
-  return false
+      found = true
+  result = found
+  {.gcsafe.}:
+    metrics
+      .healthCheckStatus
+      .labels(target.host, "docker", if result: "success" else: "failure")
+      .inc()
 
-let client = newHttpClient(maxRedirects=0)
+# let client = newHttpClient(maxRedirects=0)
+#
 
 proc isWebsiteRunning*(target: Container): bool =
-  echo fmt"Checking {target.host}"
-  let website = target.host
-  let httpUrl = fmt"http://{website}"
-  let httpsUrl = fmt"https://{website}"
-  let httpRet = client.request(httpUrl, httpMethod="GET")
-  let httpsRet = client.request(httpsUrl, httpMethod="GET")
-  let httpWorks = "301" in httpRet.status
-  # httpclient library doesn't check validity of certs right now...
-  # I probably need to implement that
-  let httpsWorks = "200" in httpsRet.status
-  return httpWorks and httpsWorks
+  try:
+    let client = newHttpClient(maxRedirects=0)
+    logger.log(lvlInfo, fmt"Checking {target.host}")
+    let website = target.host
+    let httpUrl = fmt"http://{website}"
+    let httpsUrl = fmt"https://{website}"
+    let httpRet = client.request(httpUrl, httpMethod="GET")
+    # This check seems to throw exceptions every once in a while because of cert errors...
+    # So while httpclient library says it doesn't check validity, it seems to be attempting to...
+    let httpsRet = client.request(httpsUrl, httpMethod="GET")
+    let httpWorks = "301" in httpRet.status
+    let httpsWorks = "200" in httpsRet.status
+    result = httpWorks and httpsWorks
+  except:
+    logger.log(lvlError, getCurrentExceptionMsg())
+    result = false
+  finally:
+    {.gcsafe.}:
+      metrics
+        .healthCheckStatus
+        .labels(target.host, "http", if result: "success" else: "failure")
+        .inc()
 
-
-proc createNginxConfig(target: Container) =
+proc createNginxConfig(target: Container) {.async.} =
   let port = 80
   let hosts = target.allHosts.join(" ")
   let containerPort = target.localPort
@@ -94,37 +121,44 @@ proc createNginxConfig(target: Container) =
   let enabledFile = fmt"/etc/nginx/sites-enabled/{target.name}"
   if not enabledFile.symlinkExists:
     createSymlink(filename, enabledFile)
-  restartNginx()
+  {.gcsafe.}: metrics.nginxConfigsWritten.labels(target.name).inc()
+  await restartNginx()
 
 proc parseContainer*(filename: string): Container =
-  var ret: Container
-  var s = newFileStream(filename)
-  load(s, ret)
-  s.close()
-  return ret
+  {.gcsafe.}:
+    var ret: Container
+    var s = newFileStream(filename)
+    load(s, ret)
+    s.close()
+    return ret
 
-proc runCertbot(target: Container) =
+proc runCertbot(target: Container) {.async.} =
   let allHosts = target.allHosts()
   let hostCmdLine = allHosts.map((x) => fmt"-d {x}").join(" ")
   let certbotCmd = fmt"certbot run --nginx -n --keep {hostCmdLine} --email {email} --agree-tos"
   echo certbotCmd
-  echo certbotCmd.simpleExec()
+  echo await certbotCmd.asyncExec()
+  {.gcsafe.}: metrics.letsEncryptRuns.labels(target.name).inc()
+  # metrics.incLetsEncryptRuns(@[target.name])
 
 proc isNginxConfigCorrect(target: Container): bool =
   echo "TODO IMPL ME"
   return true
 
+# Set to false, trying to figure out what
+# causes isWebsiteRunning() to randomly fail
 let ffHttpRequests = false
 
-proc ensureContainer*(target: Container) =
+proc ensureContainer*(target: Container) {.async.} =
+  discard target.isWebsiteRunning()
   if not target.isHealthy:
-    echo fmt"{target.name} is not healthy, recreating"
-    target.createContainer()
+    logger.log(lvlInfo, fmt"{target.name} is not healthy, recreating")
+    await target.createContainer()
   if ffHttpRequests:
     if not target.isWebsiteRunning:
-      target.createNginxConfig()
-      target.runCertbot()
+      await target.createNginxConfig()
+      await target.runCertbot()
   else:
-    target.createNginxConfig()
-    target.runCertbot()
+    await target.createNginxConfig()
+    await target.runCertbot()
 
