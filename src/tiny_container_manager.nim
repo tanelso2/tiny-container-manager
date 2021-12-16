@@ -58,8 +58,10 @@ proc cleanUpLetsEncryptBackups() =
       if fileType == pcDir:
         path.removeDir()
       filesDeleted += 1
+
   # TODO: Should probably be lvlDebug
   logger.log(lvlInfo, fmt"Deleted {filesDeleted} backup files")
+  metrics.letsEncryptBackupsDeleted.inc(filesDeleted)
 
 
 

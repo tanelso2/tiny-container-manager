@@ -45,6 +45,12 @@ var nginxConfigsWritten* {.global.} = prom.newCounter(
   @["site"]
 )
 
+var letsEncryptBackupsDeleted* {.global.} = prom.newCounter(
+  "tcm_letsencrypt_backups_deleted",
+  "",
+  @[]
+)
+
 proc getOutput*(): string =
   #
   # No idea if actually gcsafe, just want compiler to shut up
