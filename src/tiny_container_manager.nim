@@ -9,6 +9,7 @@ import
   strutils,
   sequtils,
   sugar,
+  times,
   tiny_container_manager/container,
   tiny_container_manager/metrics as metrics,
   tiny_container_manager/shell_utils
@@ -45,6 +46,24 @@ proc checkDiskUsage() =
   let x = "df -i".simpleExec()
   let y: string = x.split("\n").filter(z => z.contains("/dev/vda1"))[0]
 
+proc cleanUpLetsEncryptBackups() =
+  let dir = "/var/lib/letsencrypt/backups"
+  let anHourAgo = getTime() + initTimeInterval(hours = -1)
+  var filesDeleted = 0
+  for (fileType, path) in walkDir(dir):
+    # a < b if a happened before b
+    if path.getCreationTime() < anHourAgo:
+      if fileType == pcFile:
+        path.removeFile()
+      if fileType == pcDir:
+        path.removeDir()
+      filesDeleted += 1
+
+  # TODO: Should probably be lvlDebug
+  logger.log(lvlInfo, fmt"Deleted {filesDeleted} backup files")
+  metrics.letsEncryptBackupsDeleted.inc(filesDeleted)
+
+
 
 const loopSeconds = 30
 
@@ -62,6 +81,8 @@ proc mainLoop() {.async.} =
     let containers = getContainerConfigs(configDir)
     for c in containers:
       await c.ensureContainer()
+    logger.log(lvlInfo, "Cleaning up the letsencrypt backups")
+    cleanUpLetsEncryptBackups()
     #TODO: I should find a logger that injects the file,line,and can be configured.
     # Lol or I should write one
     logger.log(lvlInfo, "Going to sleep")
