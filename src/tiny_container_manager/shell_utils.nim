@@ -62,6 +62,10 @@ proc restartNginx*() {.async.} =
   echo restartNginxCmd
   echo await restartNginxCmd.asyncExec()
 
+proc reloadNginx*() {.async.} =
+  let cmd = fmt"systemctl reload nginx"
+  discard await cmd.asyncExec()
+
 proc setupFirewall*() {.async.} =
   echo await asyncExec("sudo ufw default deny incoming")
   echo await asyncExec("sudo ufw default allow outgoing")
@@ -70,3 +74,11 @@ proc setupFirewall*() {.async.} =
   echo await asyncExec("sudo ufw allow https")
   echo await asyncExec("sudo ufw allow 6969/tcp")
   echo await asyncExec("sudo ufw enable")
+
+proc checkNginxService*(): bool =
+  let cmd = "systemctl status nginx.service"
+  try:
+    discard cmd.simpleExec()
+    return true
+  except:
+    return false
