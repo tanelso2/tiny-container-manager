@@ -65,15 +65,14 @@ proc cleanUpLetsEncryptBackups() =
 const loopSeconds = 30
 
 proc loopSetup() {.async.} =
-  echo "Setting up loop"
+  logInfo("Setting up loop")
   await installNginx()
   await installCertbot()
   await setupFirewall()
 
 proc mainLoop() {.async.} =
   await loopSetup()
-  echo "Starting loop"
-  logDebug("Starting loop and logger is working?")
+  logInfo("Starting loop")
   let configDir = "/opt/tiny-container-manager"
   var i = 0
   while true:
@@ -115,14 +114,14 @@ proc main() =
 
   runForever()
 
-proc test() =
-  for _ in 1..10:
-    let c1 = Container(name: "test", image: "", containerPort: 9090, host: "thomasnelson.me")
-    echo c1.isWebsiteRunning()
-    let c2 = Container(name: "test", image: "", containerPort: 9090, host: "findmythesis.com")
-    echo c2.isWebsiteRunning()
-    let c3 = Container(name: "test", image: "", containerPort: 9090, host: "pureinvaders.com")
-    echo c3.isWebsiteRunning()
+# proc test() =
+#   for _ in 1..10:
+#     let c1 = Container(name: "test", image: "", containerPort: 9090, host: "thomasnelson.me")
+#     echo c1.isWebsiteRunning()
+#     let c2 = Container(name: "test", image: "", containerPort: 9090, host: "findmythesis.com")
+#     echo c2.isWebsiteRunning()
+#     let c3 = Container(name: "test", image: "", containerPort: 9090, host: "pureinvaders.com")
+#     echo c3.isWebsiteRunning()
 
 when isMainModule:
   # test()
