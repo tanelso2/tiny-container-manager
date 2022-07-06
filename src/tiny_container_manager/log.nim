@@ -2,7 +2,7 @@ import
   std/logging,
   strutils
 
-let logger = newConsoleLogger(fmtStr="")
+let logger* = newConsoleLogger(fmtStr="")
 
 proc levelName*(lvl: Level): string =
   LevelNames[lvl]
