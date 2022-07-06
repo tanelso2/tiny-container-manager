@@ -73,6 +73,7 @@ proc loopSetup() {.async.} =
 proc mainLoop() {.async.} =
   await loopSetup()
   echo "Starting loop"
+  logDebug("Starting loop and logger is working?")
   let configDir = "/opt/tiny-container-manager"
   var i = 0
   while true:
