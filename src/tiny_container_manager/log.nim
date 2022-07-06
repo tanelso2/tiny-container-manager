@@ -2,8 +2,23 @@ import
   std/logging,
   strutils
 
-var logger = newConsoleLogger(fmtStr="[$time] - $levelname: ")
+var logger = newConsoleLogger(fmtStr="")
 
-template logDebug*(msg: string): typed =
+proc levelName*(lvl: Level): string =
+  LevelNames[lvl]
+
+template log*(lvl: Level, msg: string) =
   let pos = instantiationInfo()
-  logger.log(lvlDebug, "$1:$2 $3" % [pos.filename, $pos.line, msg])
+  logger.log(lvl, "$1:$2:$3: $4" % [pos.filename, $pos.line, lvl.levelName(), msg])
+
+template logDebug*(msg: string) =
+  log(lvlDebug, msg)
+
+template logInfo*(msg: string) =
+  log(lvlInfo, msg)
+
+template logError*(msg: string) =
+  log(lvlError, msg)
+
+template logWarn*(msg: string) =
+  log(lvlWarn, msg)

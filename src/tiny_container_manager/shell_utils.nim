@@ -1,13 +1,10 @@
 import
   asyncdispatch,
-  std/logging,
   osproc,
   streams,
   strformat,
-  strutils
-
-let filename = currentSourcePath()
-var logger = newConsoleLogger(fmtStr=fmt"[$time] {filename} - $levelname: ")
+  strutils,
+  ./log
 
 proc runInShell*(x: openArray[string]): string =
   let process = x[0]
@@ -16,7 +13,7 @@ proc runInShell*(x: openArray[string]): string =
   defer: p.close()
   let exitCode = p.waitForExit()
   if exitCode != 0:
-    logger.log(lvlError, "process failed")
+    logError("process failed")
     echo p.errorStream().readAll()
   return p.outputStream().readAll()
 
@@ -32,7 +29,7 @@ proc asyncRunInShell*(x: seq[string]): Future[string] =
     defer: p.close()
     let exitCode = p.peekExitCode
     if exitCode == -1:
-      {.gcsafe.}: logger.log(lvlError, "Process never started, something's wrong")
+      {.gcsafe.}: logError("Process never started, something's wrong")
     if exitCode != 0:
       f.fail(newException(IOError, p.errorStream().readAll()))
       return false

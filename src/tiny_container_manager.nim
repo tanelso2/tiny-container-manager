@@ -9,7 +9,6 @@ import
   sequtils,
   sugar,
   times,
-  std/logging,
   tiny_container_manager/container,
   tiny_container_manager/log,
   tiny_container_manager/metrics as metrics,
@@ -19,9 +18,6 @@ import
 let email = "tanelso2@gmail.com"
 
 let client = newHttpClient(maxRedirects=0)
-
-let filename = currentSourcePath()
-var logger = newConsoleLogger(fmtStr=fmt"[$time] {filename} - $levelname: ")
 
 proc runCertbotForAll(containers: seq[Container]) =
   var domainFlags = ""
@@ -39,7 +35,7 @@ proc getContainerConfigs(directory: string): seq[Container] =
   discard directory.existsOrCreateDir
   var containers: seq[Container] = @[]
   for path in walkFiles(fmt"{directory}/*"):
-    logger.log(lvlInfo, fmt"walking down {path}")
+    logInfo(fmt"walking down {path}")
     if path.isConfigFile():
       containers.add(path.parseContainer())
   return containers
@@ -61,7 +57,7 @@ proc cleanUpLetsEncryptBackups() =
         path.removeDir()
       filesDeleted += 1
 
-  logger.log(lvlDebug, fmt"Deleted {filesDeleted} backup files")
+  logDebug(fmt"Deleted {filesDeleted} backup files")
   metrics.letsEncryptBackupsDeleted.inc(filesDeleted)
 
 
@@ -87,16 +83,13 @@ proc mainLoop() {.async.} =
     for c in containers:
       await c.ensureContainer()
 
-    logDebug("cleaning up them letsencrypt")
-    logger.log(lvlInfo, "Cleaning up the letsencrypt backups")
+    logInfo("Cleaning up the letsencrypt backups")
     cleanUpLetsEncryptBackups()
 
     if not checkNginxService():
       await restartNginx()
 
-    #TODO: I should find a logger that injects the file,line,and can be configured.
-    # Lol or I should write one
-    logger.log(lvlInfo, "Going to sleep")
+    logInfo("Going to sleep")
     i+=1
     await sleepAsync(loopSeconds * 1000)
     #echo "sleep 30".simpleExec()
