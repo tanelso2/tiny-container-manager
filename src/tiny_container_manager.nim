@@ -2,7 +2,6 @@ import
   asynchttpserver,
   asyncdispatch,
   httpclient,
-  logging,
   strformat,
   os,
   prometheus as prom,
@@ -10,15 +9,19 @@ import
   sequtils,
   sugar,
   times,
+  std/logging,
   tiny_container_manager/container,
+  tiny_container_manager/log,
   tiny_container_manager/metrics as metrics,
   tiny_container_manager/shell_utils
+
 
 let email = "tanelso2@gmail.com"
 
 let client = newHttpClient(maxRedirects=0)
 
-var logger = newConsoleLogger(fmtStr="[$time] - $levelname: ")
+let filename = currentSourcePath()
+var logger = newConsoleLogger(fmtStr=fmt"[$time] {filename} - $levelname: ")
 
 proc runCertbotForAll(containers: seq[Container]) =
   var domainFlags = ""
@@ -84,6 +87,7 @@ proc mainLoop() {.async.} =
     for c in containers:
       await c.ensureContainer()
 
+    logDebug("cleaning up them letsencrypt")
     logger.log(lvlInfo, "Cleaning up the letsencrypt backups")
     cleanUpLetsEncryptBackups()
 

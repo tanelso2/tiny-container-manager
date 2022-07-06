@@ -5,7 +5,7 @@ import
   ./metrics as metrics,
   asyncdispatch,
   httpclient,
-  logging,
+  std/logging,
   os,
   prometheus as prom,
   sequtils,
