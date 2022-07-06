@@ -2,10 +2,10 @@ import
   ./cert,
   ./shell_utils,
   ./docker,
-  ./metrics as metrics,
+  ./metrics,
+  ./log,
   asyncdispatch,
   httpclient,
-  logging,
   os,
   prometheus as prom,
   sequtils,
@@ -43,8 +43,6 @@ proc nginxBaseOrDefault*(target: Container): string =
     target.nginxBase
 
 const email = "tanelso2@gmail.com"
-
-var logger = newConsoleLogger(fmtStr="[$time] - $levelname: ")
 
 proc matches(target: Container, d: DContainer): bool =
   # Names are prefaced by a slash due to docker internals
@@ -124,7 +122,7 @@ proc isHealthy*(target: Container): bool =
 proc isWebsiteRunning*(target: Container): bool =
   try:
     let client = newHttpClient(maxRedirects=0)
-    logger.log(lvlInfo, fmt"Checking {target.host}")
+    logInfo(fmt"Checking {target.host}")
     let website = target.host
     let httpUrl = fmt"http://{website}"
     let httpsUrl = fmt"https://{website}"
@@ -136,7 +134,7 @@ proc isWebsiteRunning*(target: Container): bool =
     let httpsWorks = "200" in httpsRet.status
     result = httpWorks and httpsWorks
   except:
-    logger.log(lvlError, getCurrentExceptionMsg())
+    logError(getCurrentExceptionMsg())
     result = false
   finally:
     {.gcsafe.}:
@@ -301,22 +299,22 @@ let ffHttpRequests = false
 proc ensureContainer*(target: Container) {.async.} =
   discard target.isWebsiteRunning()
   if not target.isHealthy:
-    logger.log(lvlInfo, fmt"{target.name} is not healthy, recreating")
+    logInfo(fmt"{target.name} is not healthy, recreating")
     await target.createContainer()
   if not target.isCertValid():
-    logger.log(lvlInfo, fmt"{target.name} does not have a valid cert, trying to fetch")
+    logInfo(fmt"{target.name} does not have a valid cert, trying to fetch")
     await target.createSimpleNginxConfig()
     await target.runCertbot()
   else:
     if not target.isNginxConfigHttps():
-      logger.log(lvlInfo, fmt"{target.name} creating nginx config")
+      logInfo(fmt"{target.name} creating nginx config")
       await target.createHttpsNginxConfig()
       if checkNginxService():
         await reloadNginx()
       else:
         await restartNginx()
     else:
-      logger.log(lvlInfo, fmt"{target.name} seemed like it was fine, doing nothing")
+      logInfo(fmt"{target.name} seemed like it was fine, doing nothing")
   # if ffHttpRequests:
   #   if not target.isWebsiteRunning:
   #     await target.createNginxConfig()

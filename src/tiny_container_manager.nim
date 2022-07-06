@@ -2,7 +2,6 @@ import
   asynchttpserver,
   asyncdispatch,
   httpclient,
-  logging,
   strformat,
   os,
   prometheus as prom,
@@ -11,14 +10,14 @@ import
   sugar,
   times,
   tiny_container_manager/container,
+  tiny_container_manager/log,
   tiny_container_manager/metrics as metrics,
   tiny_container_manager/shell_utils
+
 
 let email = "tanelso2@gmail.com"
 
 let client = newHttpClient(maxRedirects=0)
-
-var logger = newConsoleLogger(fmtStr="[$time] - $levelname: ")
 
 proc runCertbotForAll(containers: seq[Container]) =
   var domainFlags = ""
@@ -36,7 +35,7 @@ proc getContainerConfigs(directory: string): seq[Container] =
   discard directory.existsOrCreateDir
   var containers: seq[Container] = @[]
   for path in walkFiles(fmt"{directory}/*"):
-    logger.log(lvlInfo, fmt"walking down {path}")
+    logInfo(fmt"walking down {path}")
     if path.isConfigFile():
       containers.add(path.parseContainer())
   return containers
@@ -58,7 +57,7 @@ proc cleanUpLetsEncryptBackups() =
         path.removeDir()
       filesDeleted += 1
 
-  logger.log(lvlDebug, fmt"Deleted {filesDeleted} backup files")
+  logDebug(fmt"Deleted {filesDeleted} backup files")
   metrics.letsEncryptBackupsDeleted.inc(filesDeleted)
 
 
@@ -66,14 +65,14 @@ proc cleanUpLetsEncryptBackups() =
 const loopSeconds = 30
 
 proc loopSetup() {.async.} =
-  echo "Setting up loop"
+  logInfo("Setting up loop")
   await installNginx()
   await installCertbot()
   await setupFirewall()
 
 proc mainLoop() {.async.} =
   await loopSetup()
-  echo "Starting loop"
+  logInfo("Starting loop")
   let configDir = "/opt/tiny-container-manager"
   var i = 0
   while true:
@@ -84,15 +83,15 @@ proc mainLoop() {.async.} =
     for c in containers:
       await c.ensureContainer()
 
-    logger.log(lvlInfo, "Cleaning up the letsencrypt backups")
+    logInfo("Cleaning up the letsencrypt backups")
     cleanUpLetsEncryptBackups()
 
     if not checkNginxService():
       await restartNginx()
 
-    #TODO: I should find a logger that injects the file,line,and can be configured.
-    # Lol or I should write one
-    logger.log(lvlInfo, "Going to sleep")
+    logInfo("Going to sleep")
+    # Make sure log messages are displayed promptly
+    flushFile(stdout)
     i+=1
     await sleepAsync(loopSeconds * 1000)
     #echo "sleep 30".simpleExec()
@@ -116,14 +115,14 @@ proc main() =
 
   runForever()
 
-proc test() =
-  for _ in 1..10:
-    let c1 = Container(name: "test", image: "", containerPort: 9090, host: "thomasnelson.me")
-    echo c1.isWebsiteRunning()
-    let c2 = Container(name: "test", image: "", containerPort: 9090, host: "findmythesis.com")
-    echo c2.isWebsiteRunning()
-    let c3 = Container(name: "test", image: "", containerPort: 9090, host: "pureinvaders.com")
-    echo c3.isWebsiteRunning()
+# proc test() =
+#   for _ in 1..10:
+#     let c1 = Container(name: "test", image: "", containerPort: 9090, host: "thomasnelson.me")
+#     echo c1.isWebsiteRunning()
+#     let c2 = Container(name: "test", image: "", containerPort: 9090, host: "findmythesis.com")
+#     echo c2.isWebsiteRunning()
+#     let c3 = Container(name: "test", image: "", containerPort: 9090, host: "pureinvaders.com")
+#     echo c3.isWebsiteRunning()
 
 when isMainModule:
   # test()
