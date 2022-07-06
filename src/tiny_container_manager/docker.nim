@@ -2,6 +2,7 @@ import
   httpcore,
   json,
   net,
+  os,
   strutils,
   strformat,
   tables
@@ -23,6 +24,9 @@ type
 
 const dockerSocketFile = "/var/run/docker.sock"
 const dockerSocketUrl = "unix:///var/run/docker.sock"
+
+proc dockerSocketFileExists*(): bool =
+  dockerSocketFile.fileExists()
 
 proc getDockerSocket(): Socket =
   result = newSocket(AF_UNIX, SOCK_STREAM, IPPROTO_IP)

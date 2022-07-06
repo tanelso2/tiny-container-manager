@@ -39,7 +39,6 @@ proc getContainerConfigs(directory: string): seq[Container] =
     logger.log(lvlInfo, fmt"walking down {path}")
     if path.isConfigFile():
       containers.add(path.parseContainer())
-  logger.log(lvlInfo, fmt"containers is {containers}")
   return containers
 
 proc checkDiskUsage() =
@@ -59,30 +58,38 @@ proc cleanUpLetsEncryptBackups() =
         path.removeDir()
       filesDeleted += 1
 
-  # TODO: Should probably be lvlDebug
-  logger.log(lvlInfo, fmt"Deleted {filesDeleted} backup files")
+  logger.log(lvlDebug, fmt"Deleted {filesDeleted} backup files")
   metrics.letsEncryptBackupsDeleted.inc(filesDeleted)
 
 
 
 const loopSeconds = 30
 
-
-proc mainLoop() {.async.} =
-  echo "Starting loop"
+proc loopSetup() {.async.} =
+  echo "Setting up loop"
   await installNginx()
   await installCertbot()
   await setupFirewall()
+
+proc mainLoop() {.async.} =
+  await loopSetup()
+  echo "Starting loop"
   let configDir = "/opt/tiny-container-manager"
   var i = 0
   while true:
     metrics.incRuns()
     {.gcsafe.}: metrics.iters.set(i)
+
     let containers = getContainerConfigs(configDir)
     for c in containers:
       await c.ensureContainer()
+
     logger.log(lvlInfo, "Cleaning up the letsencrypt backups")
     cleanUpLetsEncryptBackups()
+
+    if not checkNginxService():
+      await restartNginx()
+
     #TODO: I should find a logger that injects the file,line,and can be configured.
     # Lol or I should write one
     logger.log(lvlInfo, "Going to sleep")
@@ -95,7 +102,8 @@ proc runServer {.async.} =
   proc cb(req: Request) {.async.} =
     let headers = {"Content-Type": "text/plain"}
     await req.respond(Http200, metrics.getOutput(), headers.newHttpHeaders())
-  server.listen Port(6969)
+  let port = Port(6969)
+  server.listen port
   while true:
     if server.shouldAcceptRequest():
       await server.acceptRequest(cb)
