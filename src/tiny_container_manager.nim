@@ -91,6 +91,7 @@ proc mainLoop() {.async.} =
       await restartNginx()
 
     logInfo("Going to sleep")
+    flushFile(stdout)
     i+=1
     await sleepAsync(loopSeconds * 1000)
     #echo "sleep 30".simpleExec()

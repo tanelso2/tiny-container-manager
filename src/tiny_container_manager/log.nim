@@ -2,7 +2,9 @@ import
   std/logging,
   strutils
 
-let logger* = newConsoleLogger(fmtStr="")
+type Level* = logging.Level
+
+let logger = newConsoleLogger(fmtStr="[$time] ")
 
 proc levelName*(lvl: Level): string =
   LevelNames[lvl]
