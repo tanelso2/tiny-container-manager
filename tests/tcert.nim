@@ -1,4 +1,4 @@
-import 
+import
     std/re,
     strutils,
     strformat,
