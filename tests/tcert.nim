@@ -1,6 +1,5 @@
 import 
     std/re,
-    unittest,
     strutils,
     strformat,
     sequtils,
@@ -23,17 +22,16 @@ let exampleOutput = """
     Private Key Path: /etc/letsencrypt/live/thomasnelson.me/privkey.pem
 """
 
-suite "Cert suite":
-    test "parsing certbot output":
-      let res = exampleOutput.findAll(certbotCertRegex)
-      check(len(res) == 2)
-      let r = parseCerts(exampleOutput)
-      check(len(r) == 2)
-      let x = r[0]
-      check(x.name == "staging.thomasnelson.me")
-      echo x.exp.valid
-      check(x.privKeyPath == "/etc/letsencrypt/live/staging.thomasnelson.me/privkey.pem")
-      let validCerts = r.filterIt(it.exp.valid)
-      check(len(validCerts) == 1)
-      check(validCerts[0].name == "thomasnelson.me")
+block ParsingCertbotOutput:
+  let res = exampleOutput.findAll(certbotCertRegex)
+  assert len(res) == 2
+  let r = parseCerts(exampleOutput)
+  assert len(r) == 2
+  let x = r[0]
+  assert x.name == "staging.thomasnelson.me"
+  echo x.exp.valid
+  assert x.privKeyPath == "/etc/letsencrypt/live/staging.thomasnelson.me/privkey.pem"
+  let validCerts = r.filterIt(it.exp.valid)
+  assert len(validCerts) == 1
+  assert validCerts[0].name == "thomasnelson.me"
 

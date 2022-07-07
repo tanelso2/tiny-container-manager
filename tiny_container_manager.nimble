@@ -14,3 +14,5 @@ requires "nim >= 1.4.2", "yaml >= 0.15.0"
 requires "prometheus"
 requires "jester"
 
+task test, "Runs the test suite":
+  exec "testament p 'tests/*.nim'"
