@@ -291,6 +291,12 @@ proc isNginxConfigHttps*(target: Container): bool =
   let actualContents = readFile(target.nginxConfigFile())
   return expectedContents == actualContents
 
+proc lookupDns(host: string): string =
+  fmt"dig {host} +short".simpleExec()
+
+proc lookupDns(target: Container): string =
+  target.host.lookupDns()
+
 
 # Set to false, trying to figure out what
 # causes isWebsiteRunning() to randomly fail

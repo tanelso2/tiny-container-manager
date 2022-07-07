@@ -1,5 +1,11 @@
 import
+  asyncdispatch,
   prometheus as prom
+
+when isFutureLoggingEnabled:
+  import
+    prometheus/collectors/asynccollector
+  let asyncCollector = newAsyncCollector()
 
 var runs = prom.newCounter(
   "tcm_runs",
