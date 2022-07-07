@@ -10,9 +10,14 @@ bin           = @["tiny_container_manager"]
 
 # Dependencies
 
-requires "nim >= 1.4.2", "yaml >= 0.15.0"
-requires "prometheus"
+requires "nim >= 1.6.6"
+
 requires "jester"
+requires "prometheus"
+requires "yaml >= 0.15.0"
 
 task test, "Runs the test suite":
   exec "testament p 'tests/*.nim'"
+
+task choosenim, "Uses choosenim to select correct version of nim":
+  exec "choosenim 1.6.6"
