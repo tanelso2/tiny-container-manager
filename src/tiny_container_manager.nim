@@ -10,9 +10,9 @@ import
   sugar,
   times,
   tiny_container_manager/container,
-  tiny_container_manager/log,
   tiny_container_manager/metrics as metrics,
-  tiny_container_manager/shell_utils
+  tiny_container_manager/shell_utils,
+  nim_utils/logline
 
 
 let email = "tanelso2@gmail.com"

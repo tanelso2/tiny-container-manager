@@ -4,7 +4,7 @@ import
   streams,
   strformat,
   strutils,
-  ./log
+  nim_utils/logline
 
 proc runInShell*(x: openArray[string]): string =
   let process = x[0]
