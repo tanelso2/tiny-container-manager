@@ -3,7 +3,7 @@ import
   ./shell_utils,
   ./docker,
   ./metrics,
-  ./log,
+  nim_utils/logline,
   asyncdispatch,
   httpclient,
   os,
