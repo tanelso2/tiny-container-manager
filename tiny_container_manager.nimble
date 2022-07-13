@@ -15,7 +15,7 @@ requires "nim >= 1.6.6"
 requires "jester"
 requires "prometheus"
 requires "yaml >= 0.15.0"
-requires "https://github.com/tanelso2/nim_utils >= 0.1.2"
+requires "https://github.com/tanelso2/nim_utils >= 0.1.4"
 
 task test, "Runs the test suite":
   exec "testament p 'tests/*.nim'"
