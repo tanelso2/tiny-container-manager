@@ -33,9 +33,15 @@ jobs:
         # with:
           #  version: # optional, default is stable
       # Runs a set of commands using the runners shell
-      - name: Nimble test
+      # We need to run build first, otherwise the tests do not work properly...
+      # I should probably fix that, because that means the tests might lag behind
+      # because they are using old builds :grimacing:
+      - name: Nimble refresh
         run: |
-          nimble test
+          nimble refresh -y
       - name: Nimble build
         run: |
           nimble build
+      - name: Nimble test
+        run: |
+          nimble test
