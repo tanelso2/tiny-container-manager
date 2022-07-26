@@ -144,6 +144,7 @@ proc isWebsiteRunning*(target: Container): bool =
         .inc()
 
 proc simpleNginxConfig*(target: Container): string =
+  let name = target.name
   let port = 80
   let hosts = target.allHosts.join(" ")
   let containerPort = target.localPort
@@ -157,6 +158,7 @@ proc simpleNginxConfig*(target: Container): string =
     location / {
       proxy_pass http://127.0.0.1:<containerPort>;
       proxy_set_header Host $host;
+      add_header X-tcm <name> always;
     }
   }
   """, '<', '>')
@@ -171,6 +173,7 @@ proc makeHttpRedirectBlock(host: string): string =
   return x.strip()
 
 proc nginxConfigWithCert(target: Container, cert: Cert): string =
+  let name = target.name
   let allHosts = target.allHosts
   let httpRedirectBlocks = allHosts.mapIt(makeHttpRedirectBlock(it)).join("\n\n")
   let hosts = allHosts.join(" ")
@@ -192,6 +195,7 @@ proc nginxConfigWithCert(target: Container, cert: Cert): string =
     location / {
       proxy_pass http://127.0.0.1:<containerPort>;
       proxy_set_header Host $host;
+      add_header X-tcm <name> always;
     }
 
     listen 443 ssl;
