@@ -14,7 +14,7 @@ DOCKER_CREDS_GCR_RELEASE="https://github.com/GoogleCloudPlatform/docker-credenti
 T=$(mktemp -d)
 cd $T
 wget $DOCKER_CREDS_GCR_RELEASE
-tar -zxf docker-credentials*.tar.gz
+tar -zxf docker-credential*.tar.gz
 cp docker-credentials-gcr "/usr/local/bin"
 
 docker-credentials-gcr configure-docker
