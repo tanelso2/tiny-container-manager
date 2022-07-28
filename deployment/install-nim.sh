@@ -8,8 +8,7 @@ apt-get install -y \
     git \
     curl \
     gcc \
-    xz-utils \
-    libssl-dev
+    xz-utils
 
 curl https://nim-lang.org/choosenim/init.sh -sSf | sh -s -- -y
 
