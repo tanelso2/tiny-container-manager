@@ -15,10 +15,10 @@ T=$(mktemp -d)
 cd $T
 wget $DOCKER_CREDS_GCR_RELEASE
 tar -zxf docker-credential*.tar.gz
-cp docker-credentials-gcr "/usr/local/bin"
+cp docker-credential-gcr "/usr/local/bin"
 
-docker-credentials-gcr configure-docker
-docker-credentials-gcr gcr-login
+docker-credential-gcr configure-docker
+docker-credential-gcr gcr-login
 
 cd $TCM_DIR
 
