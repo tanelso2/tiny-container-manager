@@ -19,15 +19,43 @@ import
 # TODO: Figure out difference between object and ref object.
 # I have read the docs before and I still don't get it
 type
-  ContainerSpec* = ref object of RootObj
+  MountKind* = enum
+    s3fs
+  MountBase* = object of RootObj
+    name*: string
+    mountPath*: string
+  S3MountSpec* = object of MountBase
+    bucket*: string
+    accessKeyId*: string
+    accessKeySecret*: string
+  Mount* = object of RootObj
+    case kind*: MountKind
+    of s3fs:
+      spec*: S3MountSpec
+  ContainerSpec* = object of RootObj
     name*: string
     image*: string
     containerPort*: int
     host*: string
-  Container* = ref object of ContainerSpec
+    mounts* {. defaultVal: @[] .}: seq[Mount]
+  Container* = object of ContainerSpec
     nginxBase*: string
 
 const defaultNginxBase = "/etc/nginx"
+
+# proc constructChild*(s: var YamlStream,
+#                      c: ConstructionContext,
+#                      result: var Mount) =
+#   var e = s.peek()
+#   if e.kind == yamlStartMap:
+#   else:
+#     raise newException(IOError, "Cannot construct Mount from anything but a map"
+#   new(result)
+#   # Construct a Table from the yaml stream,
+#   # use it to put the Mount together
+#   #
+
+
 
 proc newContainer*(spec: ContainerSpec, nginxBase: string = defaultNginxBase): Container =
   return Container(name: spec.name,
