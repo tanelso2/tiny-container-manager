@@ -18,15 +18,14 @@ proc setupTmpDir(): string =
   return f
 
 proc testContainer(): Container =
-  let t = setupTmpDir()
   let spec = ContainerSpec(name: "test",
                            image: "nginx:latest",
                            containerPort: 80,
                            host: "example.com")
-  let testC = newContainer(spec = spec, nginxBase = t)
+  let testC = newContainer(spec = spec)
   return testC
 
-if dockerSocketFileExists():
+if dockerRunning():
   block CreatingAContainer:
     let testC = testContainer()
     if testC.isHealthy:
@@ -36,8 +35,6 @@ if dockerSocketFileExists():
     assert not testC.isHealthy()
     # Let's create it
     waitFor testC.createContainer()
-    waitFor testC.createNginxConfig()
-    assert testC.isNginxConfigCorrect()
 
 block ReadingFromFile:
   let t = "mktemp".simpleExec()

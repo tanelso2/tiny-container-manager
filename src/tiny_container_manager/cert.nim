@@ -78,5 +78,5 @@ proc parseCerts*(s: string): seq[Cert] =
   return certs.mapIt(parseCert(it))
 
 proc getAllCertbotCerts*(): seq[Cert] =
-  let output = "certbot certificates".simpleExec()
+  let output = "sudo certbot certificates".simpleExec()
   return output.parseCerts()

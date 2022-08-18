@@ -9,13 +9,13 @@ import
   sequtils,
   sugar,
   times,
+  tiny_container_manager/collection,
+  tiny_container_manager/config,
   tiny_container_manager/container,
-  tiny_container_manager/metrics as metrics,
+  tiny_container_manager/metrics,
+  tiny_container_manager/nginx,
   tiny_container_manager/shell_utils,
   nim_utils/logline
-
-
-let email = "tanelso2@gmail.com"
 
 let client = newHttpClient(maxRedirects=0)
 
@@ -24,21 +24,9 @@ proc runCertbotForAll(containers: seq[Container]) =
   let domains = containers.map(proc(c: Container): string = c.host)
   let domainsWithFlags = domains.map((x) => fmt"-d {x}")
   let d = domainsWithFlags.join(" ")
-  let certbotCmd = fmt"certbot run --nginx -n --keep {d} --email {email} --agree-tos"
+  let certbotCmd = fmt"certbot run --nginx -n --keep {d} --email {config.email} --agree-tos"
   echo certbotCmd
   echo certbotCmd.simpleExec()
-
-proc isConfigFile(filename: string): bool =
-  result = filename.endsWith(".yaml") or filename.endsWith(".yml")
-
-proc getContainerConfigs(directory: string): seq[Container] =
-  discard directory.existsOrCreateDir
-  var containers: seq[Container] = @[]
-  for path in walkFiles(fmt"{directory}/*"):
-    logInfo(fmt"walking down {path}")
-    if path.isConfigFile():
-      containers.add(path.parseContainer())
-  return containers
 
 proc checkDiskUsage() =
   let x = "df -i".simpleExec()
@@ -60,8 +48,6 @@ proc cleanUpLetsEncryptBackups() =
   logDebug(fmt"Deleted {filesDeleted} backup files")
   metrics.letsEncryptBackupsDeleted.inc(filesDeleted)
 
-
-
 const loopSeconds = 30
 
 proc loopSetup() {.async.} =
@@ -72,16 +58,22 @@ proc loopSetup() {.async.} =
 
 proc mainLoop() {.async.} =
   await loopSetup()
+  let cc = newContainersCollection()
+  let ncc = newConfigsCollection(cc, dir = "/etc/nginx/sites-available")
+  let nec = newEnabledCollection(ncc, enabledDir = "/etc/nginx/sites-enabled")
   logInfo("Starting loop")
-  let configDir = "/opt/tiny-container-manager"
   var i = 0
   while true:
     metrics.incRuns()
     {.gcsafe.}: metrics.iters.set(i)
 
-    let containers = getContainerConfigs(configDir)
-    for c in containers:
-      await c.ensureContainer()
+    # TODO: These don't need to run sequentially...
+    logInfo "Running containersCollection"
+    asyncCheck cc.ensure()
+    logInfo "Running nginx configs collection"
+    asyncCheck ncc.ensure()
+    logInfo "Running nginx enabled symlinks collection"
+    asyncCheck nec.ensure()
 
     logInfo("Cleaning up the letsencrypt backups")
     cleanUpLetsEncryptBackups()
@@ -94,7 +86,6 @@ proc mainLoop() {.async.} =
     flushFile(stdout)
     i+=1
     await sleepAsync(loopSeconds * 1000)
-    #echo "sleep 30".simpleExec()
 
 proc runServer {.async.} =
   var server = newAsyncHttpServer()
