@@ -73,10 +73,12 @@ proc tryStopContainer*(target: DContainer) {.async.} =
   await tryStopContainerByName(target.Id)
 
 proc removeContainer*(dc: DContainer) {.async.} =
+  logDebug fmt"Trying to remove container {dc.Names[0]}"
   await dc.tryStopContainer()
   await dc.tryRemoveContainer()
 
 proc createContainer*(target: Container) {.async.} =
+  logDebug fmt"Trying to create container {target.name}"
   await target.tryStopContainer()
   await target.tryRemoveContainer()
   let pullCmd = fmt"docker pull {target.image}"

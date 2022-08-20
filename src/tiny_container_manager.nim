@@ -67,13 +67,19 @@ proc mainLoop() {.async.} =
     metrics.incRuns()
     {.gcsafe.}: metrics.iters.set(i)
 
-    # TODO: These don't need to run sequentially...
-    logInfo "Running containersCollection"
-    asyncCheck cc.ensure()
-    logInfo "Running nginx configs collection"
-    asyncCheck ncc.ensure()
-    logInfo "Running nginx enabled symlinks collection"
-    asyncCheck nec.ensure()
+    try:
+      # TODO: These don't need to run sequentially...
+      logInfo "Running containersCollection"
+      discard await cc.ensure()
+      logInfo "Running nginx configs collection"
+      discard await ncc.ensure()
+      logInfo "Running nginx enabled symlinks collection"
+      discard await  nec.ensure()
+    except:
+      let
+        e = getCurrentException()
+        msg = getCurrentExceptionMsg()
+      logError fmt"Got exception {repr(e)} with message {msg}"
 
     logInfo("Cleaning up the letsencrypt backups")
     cleanUpLetsEncryptBackups()

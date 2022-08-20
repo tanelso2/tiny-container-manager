@@ -202,6 +202,7 @@ proc newConfigsCollection*(cc: ContainersCollection, dir: string): NginxConfigsC
     return getActualNginxConfigs(dir)
 
   proc remove(e: ActualNginxConfig) {.async.} =
+    logDebug fmt"Trying to remove nginxConfig {e.path}"
     removePath(e.path)
 
   proc onChange(cr: ChangeResult[NginxConfig, ActualNginxConfig]) {.async.} =
@@ -211,6 +212,7 @@ proc newConfigsCollection*(cc: ContainersCollection, dir: string): NginxConfigsC
         await c.requestCert()
   
   proc create(i: NginxConfig) {.async.} =
+    logDebug fmt"Trying to create nginxConfig {i.name}"
     await i.createInDir(dir)
 
   NginxConfigsCollection(
@@ -262,6 +264,7 @@ proc newEnabledCollection*(ncc: NginxConfigsCollection, enabledDir: string): Ngi
     return getActualEnabledFiles(enabledDir)
 
   proc remove(e: NginxEnabledFile) {.async.} =
+    logDebug fmt"Trying to remove nginxConfig {e.filePath}"
     removePath(e.filePath)
 
   NginxEnabledCollection(
