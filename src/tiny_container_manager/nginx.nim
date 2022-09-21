@@ -27,6 +27,16 @@ type
     allHosts*: seq[string]
     containers*: seq[ContainerRef]
 
+proc apiConfig(): NginxConfig =
+  let rootCon = ContainerRef(path: "/",
+                             port: config.tcmApiPort,
+                             container: Container())
+  NginxConfig(
+    name: "tcm_api",
+    allHosts: @[config.tcmHost],
+    containers: @[rootCon]
+  )
+
 proc filename*(target: NginxConfig): string =
   fmt"{target.name}.conf"
 
@@ -138,6 +148,8 @@ proc getExpectedNginxConfigs(containers: seq[Container]): seq[NginxConfig] =
         let port = rc.get().localPort
         NginxConfig(name: c.name, allHosts: c.allHosts, containers: @[ContainerRef(path: "/", container: c, port: port)])
 
+  result.add(apiConfig())
+
 proc getExpectedNginxConfigs(cc: ContainersCollection): Future[seq[NginxConfig]] {.async.} =
   let cons = await cc.getExpected()
   return getExpectedNginxConfigs(cons)
@@ -154,16 +166,20 @@ proc getActualNginxEnabled(): seq[string] =
   return collectFilesInDir(nginxEnabledDir)
 
 
-proc compare(expected: NginxConfig, actual: ActualNginxConfig): bool =
+proc compare(expected: NginxConfig, actual: ActualNginxConfig, useHttps: bool): bool =
   if actual.fileType != ftFile:
     return false
   if actual.filename != expected.filename:
     return false
-  if not expected.isCertValid():
-    # If the cert is not valid, consider this a non-valid deployment
-    return false
-  let cert = expected.cert.get()
-  let expectedContents = expected.nginxConfigWithCert(cert)
+  var expectedContents: string
+  if useHttps:
+    if not expected.isCertValid():
+      # If the cert is not valid, consider this a non-valid deployment
+      return false
+    let cert = expected.cert.get()
+    expectedContents = expected.nginxConfigWithCert(cert)
+  else:
+    expectedContents = expected.simpleNginxConfig()
   let contents = readFile(actual.path)
   return contents == expectedContents
 
@@ -174,11 +190,11 @@ proc requestCert(target: NginxConfig) {.async.} =
   echo certbotCmd
   echo await certbotCmd.asyncExec()
 
-proc createInDir(target: NginxConfig, dir: string) {.async.} =
+proc createInDir(target: NginxConfig, dir: string, useHttps: bool) {.async.} =
   logInfo fmt"Creating {target.name}"
   var contents: string
   let certValid = target.isCertValid
-  if target.isCertValid:
+  if useHttps and target.isCertValid:
     let cert = target.cert.get()
     contents = target.nginxConfigWithCert(cert)
   else:
@@ -189,15 +205,18 @@ proc createInDir(target: NginxConfig, dir: string) {.async.} =
 
 proc onNginxChange() {.async.} =
   if checkNginxService():
+    logDebug "Reloading nginx"
     await reloadNginx()
   else:
+    logDebug "Restarting nginx"
     await restartNginx()
 
 type
   NginxConfigsCollection* = ref object of ManagedCollection[NginxConfig, ActualNginxConfig]
     dir*: string
+    useHttps: bool
 
-proc newConfigsCollection*(cc: ContainersCollection, dir: string): NginxConfigsCollection =
+proc newConfigsCollection*(cc: ContainersCollection, dir: string, useHttps: bool): NginxConfigsCollection =
   proc getWorldState(): Future[seq[ActualNginxConfig]] {.async.} =
     return getActualNginxConfigs(dir)
 
@@ -207,18 +226,19 @@ proc newConfigsCollection*(cc: ContainersCollection, dir: string): NginxConfigsC
 
   proc onChange(cr: ChangeResult[NginxConfig, ActualNginxConfig]) {.async.} =
     await onNginxChange()
-    for c in cr.added:
-      if not c.isCertValid:
-        await c.requestCert()
-  
+    if useHttps:
+      for c in cr.added:
+        if not c.isCertValid:
+          await c.requestCert()
+
   proc create(i: NginxConfig) {.async.} =
     logDebug fmt"Trying to create nginxConfig {i.name}"
-    await i.createInDir(dir)
+    await i.createInDir(dir, useHttps)
 
   NginxConfigsCollection(
     getExpected: () => getExpectedNginxConfigs(cc),
     getWorldState: getWorldState,
-    matches: (i: NginxConfig, e: ActualNginxConfig) => compare(i,e),
+    matches: (i: NginxConfig, e: ActualNginxConfig) => compare(i,e, useHttps),
     remove: remove,
     create: create,
     onChange: onChange,
@@ -232,7 +252,7 @@ type
     target*: string
   NginxEnabledFile* = object of RootObj
     filePath*: string
-  NginxEnabledCollection = ref object of ManagedCollection[EnabledLink, NginxEnabledFile]
+  NginxEnabledCollection* = ref object of ManagedCollection[EnabledLink, NginxEnabledFile]
     enabledDir*: string
 
 proc getExpectedEnabledFiles(ncc: NginxConfigsCollection, enabledDir: string): Future[seq[EnabledLink]] {.async.} =

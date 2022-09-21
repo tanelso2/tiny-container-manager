@@ -31,18 +31,13 @@ let mockConfig = NginxConfig(
   ]
 )
 
-proc mkExpectedProc(x: seq[NginxConfig]): () -> Future[seq[NginxConfig]] =
-  proc f(): Future[seq[NginxConfig]] {.async.} =
-    return x
-  return f
-
 let cc = newContainersCollection()
 
 block RemoveOne:
   let tmpDir = createTempDir("","")
-  let ncc = newConfigsCollection(cc, dir = tmpDir)
+  let ncc = newConfigsCollection(cc, dir = tmpDir, useHttps = false)
   ncc.disableOnChange()
-  ncc.getExpected = mkExpectedProc @[]
+  ncc.mkExpected @[]
   let extraFile = tmpDir / "extra.conf"
   extraFile.createFile
 
@@ -56,9 +51,9 @@ block RemoveOne:
 
 block CreateOneIdempotent:
   let tmpDir = createTempDir("","")
-  let ncc = newConfigsCollection(cc, dir = tmpDir)
+  let ncc = newConfigsCollection(cc, dir = tmpDir, useHttps = false)
   ncc.disableOnChange()
-  ncc.getExpected = mkExpectedProc @[mockConfig]
+  ncc.mkExpected @[mockConfig]
 
   # assert no files
   let startingState = waitFor ncc.getWorldState()
@@ -78,9 +73,9 @@ block CreateOneIdempotent:
 
 block ModifyOne:
   let tmpDir = createTempDir("","")
-  let ncc = newConfigsCollection(cc, dir = tmpDir)
+  let ncc = newConfigsCollection(cc, dir = tmpDir, useHttps = false)
   ncc.disableOnChange()
-  ncc.getExpected = mkExpectedProc @[mockConfig]
+  ncc.mkExpected @[mockConfig]
   let extraFile = tmpDir / mockConfig.filename
   extraFile.createFile
 
@@ -91,6 +86,21 @@ block ModifyOne:
   assert len(changes.removed) == 1
   let endState = waitFor ncc.getWorldState()
   assert len(endState) == 1
+
+block AddsAPIConfig:
+  let tmpDir = createTempDir("", "")
+  let mockContainersCollection = newContainersCollection()
+  mockContainersCollection.mkExpected @[]
+  let ncc = newConfigsCollection(mockContainersCollection, dir = tmpDir, useHttps = false)
+  ncc.disableOnChange()
+
+  let startingState = waitFor ncc.getWorldState()
+  assert len(startingState) == 0
+  let changes = waitFor ncc.ensure()
+  assert len(changes.added) == 1
+  let endState = waitFor ncc.getWorldState()
+  assert len(endState) == 1
+  
 
 
 # block RemoveOne:

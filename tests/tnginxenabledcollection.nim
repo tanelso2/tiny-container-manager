@@ -13,11 +13,6 @@ import
   nim_utils/logline
 
 
-proc mkExpectedProc(x: seq[EnabledLink]): () -> Future[seq[EnabledLink]] =
-  proc f(): Future[seq[EnabledLink]] {.async.} =
-    return x
-  return f
-
 proc mkMockLink(enabledDir: string, targetDir: string): EnabledLink =
   let filename = "mock.conf"
   EnabledLink(
@@ -26,13 +21,13 @@ proc mkMockLink(enabledDir: string, targetDir: string): EnabledLink =
   )
 
 let cc = newContainersCollection()
-let ncc = newConfigsCollection(cc, dir = createTempDir("",""))
+let ncc = newConfigsCollection(cc, dir = createTempDir("",""), useHttps = false)
 block CreateOneIdempotent:
   let tmpDir = createTempDir("","")
   let nec = newEnabledCollection(ncc, tmpDir)
   let mockSymlink  = mkMockLink(nec.enabledDir, ncc.dir)
   nec.disableOnChange()
-  nec.getExpected = mkExpectedProc @[mockSymlink]
+  nec.mkExpected @[mockSymlink]
 
   let startingState = waitFor nec.getWorldState()
   assert len(startingState) == 0
@@ -54,7 +49,7 @@ block RemoveOne:
   let tmpDir = createTempDir("","")
   let nec = newEnabledCollection(ncc, tmpDir)
   nec.disableOnChange()
-  nec.getExpected = mkExpectedProc @[]
+  nec.mkExpected @[]
   let extraFile = tmpDir / "extra.conf"
   extraFile.createFile
 

@@ -25,16 +25,11 @@ let testC = newContainer(spec = ContainerSpec(
   host: "example.com"
 ))
 
-proc mkExpectedProc(x: seq[Container]): () -> Future[seq[Container]] =
-  proc f(): Future[seq[Container]] {.async.} =
-    return x
-  return f
-
 if dockerRunning():
   block CleanSlate:
     let cc = newContainersCollection()
     cc.disableOnChange()
-    cc.getExpected = mkExpectedProc @[]
+    cc.mkExpected @[]
 
     discard waitFor cc.ensure()
     let cleanState = waitFor cc.getWorldState()
@@ -43,7 +38,7 @@ if dockerRunning():
   block CreateOneIdempotent:
     let cc = newContainersCollection()
     cc.disableOnChange()
-    cc.getExpected = mkExpectedProc @[testC]
+    cc.mkExpected @[testC]
 
     let startingState = waitFor cc.getWorldState()
     assert len(startingState) == 0
@@ -62,7 +57,7 @@ if dockerRunning():
   block RemoveOneIdempotent:
     let cc = newContainersCollection()
     cc.disableOnChange()
-    cc.getExpected = mkExpectedProc @[]
+    cc.mkExpected @[]
 
     let startingState = waitFor cc.getWorldState()
     # 1 left over from last block

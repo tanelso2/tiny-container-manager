@@ -5,6 +5,7 @@ import
   ./config,
   ./collection,
   nim_utils/logline,
+  nim_utils/files,
   asyncdispatch,
   httpclient,
   os,
@@ -16,18 +17,24 @@ import
   strformat,
   strutils,
   sugar,
+  yaml,
   yaml/serialization
 
 # TODO: Figure out difference between object and ref object.
 # I have read the docs before and I still don't get it
 type
-  ContainerSpec* = ref object of RootObj
+  ContainerSpec* = object of RootObj
     name*: string
     image*: string
     containerPort*: int
     host*: string
-  Container* = ref object of ContainerSpec
+  Container* = object of ContainerSpec
 
+proc spec*(c: Container): ContainerSpec =
+  ContainerSpec(name: c.name,
+                image: c.image,
+                containerPort: c.containerPort,
+                host: c.host)
 
 proc newContainer*(spec: ContainerSpec): Container =
   return Container(name: spec.name,
@@ -153,8 +160,8 @@ proc parseContainer*(filename: string): Container =
   {.gcsafe.}:
     var spec: ContainerSpec
     var s = newFileStream(filename)
+    defer: s.close()
     load(s, spec)
-    s.close()
     return newContainer(spec)
 
 
@@ -167,9 +174,9 @@ proc lookupDns(target: Container): string =
 proc isConfigFile(filename: string): bool =
   result = filename.endsWith(".yaml") or filename.endsWith(".yml")
 
-proc getContainerConfigs*(directory: string = config.configDir): seq[Container] =
+proc getContainerConfigs*(directory: string = config.containerDir): seq[Container] =
   discard directory.existsOrCreateDir
-  var containers: seq[Container] = @[]
+  var containers: seq[Container] = newSeq[Container]()
   for path in walkFiles(fmt"{directory}/*"):
     logInfo(fmt"walking down {path}")
     if path.isConfigFile():
@@ -178,9 +185,10 @@ proc getContainerConfigs*(directory: string = config.configDir): seq[Container] 
 
 type
   ContainersCollection* = ref object of ManagedCollection[Container, DContainer]
+    dir: string
 
 
-proc newContainersCollection*(dir = config.configDir):  ContainersCollection =
+proc newContainersCollection*(dir = config.containerDir):  ContainersCollection =
   proc getExpected(): Future[seq[Container]] {.async.} =
     return getContainerConfigs(dir)
 
@@ -188,9 +196,49 @@ proc newContainersCollection*(dir = config.configDir):  ContainersCollection =
     return getContainers()
 
   ContainersCollection(
+    dir: dir,
     getExpected: getExpected,
     getWorldState: getWorldState,
     matches: (c: Container, dc: DContainer) => c.matches(dc),
     remove: removeContainer,
     create: createContainer
   )
+
+proc filename(spec: ContainerSpec): string = fmt"{spec.name}.yaml"
+
+type 
+  ErrAlreadyExists* = object of ValueError
+  ErrDoesNotExist* = object of OSError
+
+proc deleteNamedContainer*(name: string, dir = config.containerDir) =
+  let filename = fmt"{name}.yaml"
+  let path = dir / filename
+  if not path.fileExists:
+    raise newException(ErrDoesNotExist, fmt"{path} doesn't exist")
+  path.removePath()
+
+proc writeFile*(spec: ContainerSpec, dir = config.containerDir) =
+  let path = dir / spec.filename
+  var s = newFileStream(path, fmWrite)
+  defer: s.close()
+  # Marking this as gcsafe just to make errors go away.
+  # Do not actually know if it should be
+  {.gcsafe.}:
+    dump(spec, s, handles = @[])
+
+proc add*(spec: ContainerSpec, dir = config.containerDir) =
+  let path = dir / spec.filename
+  if path.fileExists:
+    raise newException(ErrAlreadyExists, fmt"{path} already exists")
+  spec.writeFile()
+
+proc getContainerByName*(name: string, dir = config.containerDir): Option[Container] =
+  let path = dir / fmt"{name}.yaml"
+  if not path.fileExists:
+    return none(Container)
+  try:
+    let container = path.parseContainer()
+    return some(container)
+  except:
+    return none(Container)
+
