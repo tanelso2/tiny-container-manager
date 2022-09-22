@@ -1,7 +1,11 @@
 import
-  asynchttpserver,
+  asynchttpserver
+
+import
   asyncdispatch,
   httpclient,
+  json,
+  logging,
   strformat,
   os,
   prometheus as prom,
@@ -9,13 +13,20 @@ import
   sequtils,
   sugar,
   times,
-  tiny_container_manager/container,
-  tiny_container_manager/metrics as metrics,
-  tiny_container_manager/shell_utils,
-  nim_utils/logline
+  tiny_container_manager/[
+    auth,
+    collection,
+    config,
+    container,
+    json_utils,
+    metrics,
+    nginx,
+    shell_utils
+  ],
+  nim_utils/logline,
+  jester
 
-
-let email = "tanelso2@gmail.com"
+var debugMode = false
 
 let client = newHttpClient(maxRedirects=0)
 
@@ -24,21 +35,9 @@ proc runCertbotForAll(containers: seq[Container]) =
   let domains = containers.map(proc(c: Container): string = c.host)
   let domainsWithFlags = domains.map((x) => fmt"-d {x}")
   let d = domainsWithFlags.join(" ")
-  let certbotCmd = fmt"certbot run --nginx -n --keep {d} --email {email} --agree-tos"
+  let certbotCmd = fmt"certbot run --nginx -n --keep {d} --email {config.email} --agree-tos"
   echo certbotCmd
   echo certbotCmd.simpleExec()
-
-proc isConfigFile(filename: string): bool =
-  result = filename.endsWith(".yaml") or filename.endsWith(".yml")
-
-proc getContainerConfigs(directory: string): seq[Container] =
-  discard directory.existsOrCreateDir
-  var containers: seq[Container] = @[]
-  for path in walkFiles(fmt"{directory}/*"):
-    logInfo(fmt"walking down {path}")
-    if path.isConfigFile():
-      containers.add(path.parseContainer())
-  return containers
 
 proc checkDiskUsage() =
   let x = "df -i".simpleExec()
@@ -60,28 +59,42 @@ proc cleanUpLetsEncryptBackups() =
   logDebug(fmt"Deleted {filesDeleted} backup files")
   metrics.letsEncryptBackupsDeleted.inc(filesDeleted)
 
-
-
 const loopSeconds = 30
 
 proc loopSetup() {.async.} =
   logInfo("Setting up loop")
+  logInfo("Making sure nginx is installed")
   await installNginx()
+  logInfo("Making sure certbot is installed")
   await installCertbot()
+  logInfo("Setting up the firewall")
   await setupFirewall()
 
-proc mainLoop() {.async.} =
-  await loopSetup()
+proc mainLoop(disableSetup = false, useHttps = true) {.async.} =
+  if not disableSetup:
+    await loopSetup()
+  let cc = newContainersCollection()
+  let ncc = newConfigsCollection(cc, dir = "/etc/nginx/sites-available", useHttps=useHttps)
+  let nec = newEnabledCollection(ncc, enabledDir = "/etc/nginx/sites-enabled")
   logInfo("Starting loop")
-  let configDir = "/opt/tiny-container-manager"
   var i = 0
   while true:
     metrics.incRuns()
     {.gcsafe.}: metrics.iters.set(i)
 
-    let containers = getContainerConfigs(configDir)
-    for c in containers:
-      await c.ensureContainer()
+    try:
+      # TODO: These don't need to run sequentially...
+      logInfo "Running containersCollection"
+      discard await cc.ensure()
+      logInfo "Running nginx configs collection"
+      discard await ncc.ensure()
+      logInfo "Running nginx enabled symlinks collection"
+      discard await  nec.ensure()
+    except:
+      let
+        e = getCurrentException()
+        msg = getCurrentExceptionMsg()
+      logError fmt"Got exception {repr(e)} with message {msg}"
 
     logInfo("Cleaning up the letsencrypt backups")
     cleanUpLetsEncryptBackups()
@@ -94,24 +107,118 @@ proc mainLoop() {.async.} =
     flushFile(stdout)
     i+=1
     await sleepAsync(loopSeconds * 1000)
-    #echo "sleep 30".simpleExec()
 
-proc runServer {.async.} =
-  var server = newAsyncHttpServer()
-  proc cb(req: Request) {.async.} =
-    let headers = {"Content-Type": "text/plain"}
-    await req.respond(Http200, metrics.getOutput(), headers.newHttpHeaders())
-  let port = Port(6969)
-  server.listen port
-  while true:
-    if server.shouldAcceptRequest():
-      await server.acceptRequest(cb)
+template swallowErrors*(body: untyped) =
+  try:
+    body
+  except:
+    if debugMode:
+      resp Http500, fmt"Something bad happened: {getCurrentExceptionMsg()}", contentType = "text/plain"
     else:
-      poll()
+      resp Http500, fmt"An error occurred", contentType = "text/plain"
+
+template respText*(s: string) =
+  resp s, contentType = "text/plain"
+
+template respOk* =
+  respText "OK"
+
+router application:
+  get "/metrics":
+    respText metrics.getOutput()
+  get "/containers":
+    swallowErrors:
+      authRequired:
+        let containers = getContainerConfigs().mapIt(it.spec())
+        jsonResp containers
+  post "/container":
+    swallowErrors:
+      authRequired:
+        logInfo fmt"Got a POST"
+        let spec = request.jsonBody(ContainerSpec)
+        try:
+          spec.add()
+        except ErrAlreadyExists:
+          resp Http409, fmt"A container with name {spec.name} already exists"
+        respOk
+  delete "/container/@name":
+    swallowErrors:
+      authRequired:
+        let name = @"name"
+        try:
+          deleteNamedContainer(name)
+        except ErrDoesNotExist:
+          resp Http404
+        resp Http204
+  patch "/container/@name/image":
+    swallowErrors:
+      authRequired:
+        let name = @"name"
+        let maybeContainer = getContainerByName(name)
+        if maybeContainer.isNone():
+          resp Http404
+        let c = maybeContainer.get()
+        let newImage = request.body
+        let newSpec = ContainerSpec(name: c.name,
+                                    image: newImage,
+                                    host: c.host,
+                                    containerPort: c.containerPort)
+        newSpec.writeFile()
+        respOk
+
+proc runServer =
+  logInfo "Starting server"
+  let portNum = 6969
+  let port = Port(portNum)
+  let settings = newSettings(port=port)
+  var jester = initJester(application, settings=settings)
+  jester.serve()
+  logInfo fmt"Server is listening on port {portNum}"
+
+# proc runServer {.async.} =
+#   logInfo "Starting server"
+#   var server = newAsyncHttpServer()
+#   let portNum = 6969
+#   let port = Port(portNum)
+#   server.listen port
+#   logInfo fmt"Server is listening on port {portNum}"
+#   while true:
+#     if server.shouldAcceptRequest():
+#       await server.acceptRequest()
+#     else:
+#       poll()
+import argparse
+var p = newParser:
+  flag("--no-management", help="Run the API server only")
+  flag("--disable-setup", help="Disable the setup and go straight to the main loop")
+  flag("--disable-https", help="Disable https")
+  flag("-d", "--debug", help="Enable debug messaging")
+
+var serverThread: Thread[void]
+
+proc runServerThreaded: void =
+  logInfo "What is going on"
+  let f = proc () {.thread.} = runServer()
+  logInfo "Starting server thread"
+  createThread(serverThread, f)
 
 proc main() =
-  asyncCheck mainLoop()
-  asyncCheck runServer()
+  var opts = p.parse(commandLineParams())
+
+  let disableSetup = opts.disable_setup
+  let useHttps = not opts.disable_https
+  if opts.debug:
+    debugMode = true
+    setLogFilter(lvlDebug)
+  else:
+    setLogFilter(lvlInfo)
+  if opts.no_management:
+    logInfo "No management mode enabled, not starting the mainLoop"
+    runServer()
+  else:
+    asyncCheck mainLoop(disableSetup=disableSetup, useHttps=useHttps)
+  runServerThreaded()
+  # asyncCheck runServer()
 
   runForever()
 

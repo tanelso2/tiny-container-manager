@@ -4,8 +4,8 @@ Description = "Tiny container manager"
 [Service]
 Type=simple
 Restart=always
-WorkingDirectory=/root/tiny-container-manager
-ExecStart=/root/tiny-container-manager/deployment/run.sh
+WorkingDirectory=/tcm
+ExecStart=/tcm/deployment/run.sh
 User=root
 
 [Install]

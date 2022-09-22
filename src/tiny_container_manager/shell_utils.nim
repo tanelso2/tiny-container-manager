@@ -71,7 +71,6 @@ proc setupFirewall*() {.async.} =
   echo await asyncExec("sudo ufw allow ssh")
   echo await asyncExec("sudo ufw allow http")
   echo await asyncExec("sudo ufw allow https")
-  echo await asyncExec("sudo ufw allow 6969/tcp")
   echo await asyncExec("sudo ufw enable")
 
 proc checkNginxService*(): bool =

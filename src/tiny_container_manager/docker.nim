@@ -1,11 +1,13 @@
 import
-  httpcore,
   json,
   net,
   os,
   strutils,
   strformat,
-  tables
+  tables,
+  nim_utils/[
+    shell_utils
+  ]
 
 type
   DContainer* = object
@@ -27,6 +29,9 @@ const dockerSocketUrl = "unix:///var/run/docker.sock"
 
 proc dockerSocketFileExists*(): bool =
   dockerSocketFile.fileExists()
+
+proc dockerRunning*(): bool =
+  tryExec "docker ps"
 
 proc getDockerSocket(): Socket =
   result = newSocket(AF_UNIX, SOCK_STREAM, IPPROTO_IP)

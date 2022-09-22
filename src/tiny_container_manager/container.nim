@@ -1,48 +1,46 @@
 import
-  ./cert,
   ./shell_utils,
   ./docker,
   ./metrics,
+  ./config,
+  ./collection,
   nim_utils/logline,
+  nim_utils/files,
   asyncdispatch,
   httpclient,
   os,
   prometheus as prom,
   sequtils,
   std/options,
+  std/sugar,
   streams,
   strformat,
   strutils,
   sugar,
+  yaml,
   yaml/serialization
 
 # TODO: Figure out difference between object and ref object.
 # I have read the docs before and I still don't get it
 type
-  ContainerSpec* = ref object of RootObj
+  ContainerSpec* = object of RootObj
     name*: string
     image*: string
     containerPort*: int
     host*: string
-  Container* = ref object of ContainerSpec
-    nginxBase*: string
+  Container* = object of ContainerSpec
 
-const defaultNginxBase = "/etc/nginx"
+proc spec*(c: Container): ContainerSpec =
+  ContainerSpec(name: c.name,
+                image: c.image,
+                containerPort: c.containerPort,
+                host: c.host)
 
-proc newContainer*(spec: ContainerSpec, nginxBase: string = defaultNginxBase): Container =
+proc newContainer*(spec: ContainerSpec): Container =
   return Container(name: spec.name,
                    image: spec.image,
                    containerPort: spec.containerPort,
-                   host: spec.host,
-                   nginxBase: nginxBase)
-
-proc nginxBaseOrDefault*(target: Container): string =
-  if target.nginxBase == "":
-    raise newException(IOError, "Blank nginx base not allowed")
-  else:
-    target.nginxBase
-
-const email = "tanelso2@gmail.com"
+                   host: spec.host)
 
 proc matches(target: Container, d: DContainer): bool =
   # Names are prefaced by a slash due to docker internals
@@ -52,25 +50,42 @@ proc matches(target: Container, d: DContainer): bool =
 
   return nameMatch and imageMatch
 
-proc allHosts(target: Container): seq[string] =
+proc allHosts*(target: Container): seq[string] =
   return @[target.host, fmt"www.{target.host}"]
 
-proc tryStopContainer*(target: Container) {.async.} =
+proc tryStopContainerByName*(name: string) {.async.} =
   try:
-    let stopCmd = fmt"docker stop {target.name}"
+    let stopCmd = fmt"docker stop {name}"
     discard await stopCmd.asyncExec()
   except:
     discard # TODO: Only discard if failed because container didn't exist
 
-proc tryRemoveContainer*(target: Container) {.async.} =
+proc tryStopContainer*(target: Container) {.async.} =
+  await tryStopContainerByName(target.name)
+
+proc tryRemoveContainerByName*(name: string) {.async.} =
   try:
-    let rmCmd = fmt"docker rm {target.name}"
+    let rmCmd = fmt"docker rm {name}"
     discard await rmCmd.asyncExec()
   except:
     discard
 
+proc tryRemoveContainer*(target: Container) {.async.} =
+  await tryRemoveContainerByName(target.name)
+
+proc tryRemoveContainer*(target: DContainer) {.async.} =
+  await tryRemoveContainerByName(target.Id)
+
+proc tryStopContainer*(target: DContainer) {.async.} =
+  await tryStopContainerByName(target.Id)
+
+proc removeContainer*(dc: DContainer) {.async.} =
+  logDebug fmt"Trying to remove container {dc.Names[0]}"
+  await dc.tryStopContainer()
+  await dc.tryRemoveContainer()
 
 proc createContainer*(target: Container) {.async.} =
+  logDebug fmt"Trying to create container {target.name}"
   await target.tryStopContainer()
   await target.tryRemoveContainer()
   let pullCmd = fmt"docker pull {target.image}"
@@ -82,26 +97,23 @@ proc createContainer*(target: Container) {.async.} =
   echo await cmd.asyncExec()
   {.gcsafe.}: metrics.containerStarts.labels(target.name).inc()
 
-proc certMatches(target: Container, cert: Cert): bool =
-  let domains = cert.domains
-  let host = target.host
-  return domains.anyIt(it == host)
-
-proc getInstalledCert(target: Container): Option[Cert] =
-  let certs = getAllCertbotCerts()
-  let matches = certs.filterIt(certMatches(target, it))
-  if len(matches) < 1:
-    return none(Cert)
+proc runningContainer*(target: Container): Option[DContainer] =
+  let containers = getContainers()
+  let matches = containers.filterIt(target.matches(it))
+  if len(matches) == 0:
+    return none(DContainer)
   else:
     return some(matches[0])
 
-proc getRunningContainer(target: Container): DContainer =
-  let containers = getContainers()
-  return containers.filterIt(target.matches(it))[0]
+proc getRunningContainer*(target: Container): DContainer =
+  return target.runningContainer.get()
+
+proc localPort*(c: DContainer): int =
+  return c.Ports[0].PublicPort
 
 proc localPort*(target: Container): int =
   let c = target.getRunningContainer()
-  return c.Ports[0].PublicPort
+  return c.localPort
 
 proc isHealthy*(target: Container): bool =
   let containers = getContainers()
@@ -126,10 +138,10 @@ proc isWebsiteRunning*(target: Container): bool =
     let website = target.host
     let httpUrl = fmt"http://{website}"
     let httpsUrl = fmt"https://{website}"
-    let httpRet = client.request(httpUrl, httpMethod="GET")
+    let httpRet = client.request(httpUrl, httpMethod=HttpGet)
     # This check seems to throw exceptions every once in a while because of cert errors...
     # So while httpclient library says it doesn't check validity, it seems to be attempting to...
-    let httpsRet = client.request(httpsUrl, httpMethod="GET")
+    let httpsRet = client.request(httpsUrl, httpMethod=HttpGet)
     let httpWorks = "301" in httpRet.status
     let httpsWorks = "200" in httpsRet.status
     result = httpWorks and httpsWorks
@@ -143,157 +155,15 @@ proc isWebsiteRunning*(target: Container): bool =
         .labels(target.host, "http", if result: "success" else: "failure")
         .inc()
 
-proc simpleNginxConfig*(target: Container): string =
-  let name = target.name
-  let port = 80
-  let hosts = target.allHosts.join(" ")
-  let containerPort = target.localPort
-  let x = fmt("""
-  server {
-    listen <port>;
-    listen [::]:<port>;
-
-    server_name <hosts>;
-
-    location / {
-      proxy_pass http://127.0.0.1:<containerPort>;
-      proxy_set_header Host $host;
-      add_header X-tcm <name> always;
-    }
-  }
-  """, '<', '>')
-  return x
-
-proc makeHttpRedirectBlock(host: string): string =
-  let x = fmt("""
-    if ($host = <host>) {
-      return 301 https://$host$request_uri;
-    }
-  """, '<', '>')
-  return x.strip()
-
-proc nginxConfigWithCert(target: Container, cert: Cert): string =
-  let name = target.name
-  let allHosts = target.allHosts
-  let httpRedirectBlocks = allHosts.mapIt(makeHttpRedirectBlock(it)).join("\n\n")
-  let hosts = allHosts.join(" ")
-  let containerPort = target.localPort
-  let certPath = cert.certPath
-  let privKeyPath = cert.privKeyPath
-  let x = fmt("""
-  server {
-    listen 80;
-    listen [::]:80;
-
-    <httpRedirectBlocks>
-
-    server_name <hosts>;
-    return 404;
-  }
-  server {
-    server_name <hosts>;
-    location / {
-      proxy_pass http://127.0.0.1:<containerPort>;
-      proxy_set_header Host $host;
-      add_header X-tcm <name> always;
-    }
-
-    listen 443 ssl;
-    ssl_certificate <certPath>;
-    ssl_certificate_key <privKeyPath>;
-    include /etc/letsencrypt/options-ssl-nginx.conf;
-    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
-  }
-  """, '<', '>')
-  return x
-
-proc nginxConfigFile(target: Container): string =
-  let base = target.nginxBaseOrDefault()
-  fmt"{base}/sites-available/{target.name}"
-
-proc nginxEnabledFile(target: Container): string =
-  let base = target.nginxBaseOrDefault()
-  fmt"{base}/sites-enabled/{target.name}"
-
-proc enableInNginx(target: Container) =
-  assert target.nginxConfigFile.fileExists
-  if not target.nginxEnabledFile.symLinkExists:
-    createSymlink(target.nginxConfigFile, target.nginxEnabledFile)
-
-proc disableInNginx(target: Container) =
-  target.nginxEnabledFile.removeFile()
-
-proc isEnabledInNginx(target: Container): bool =
-  target.nginxConfigFile.fileExists and target.nginxEnabledFile.symLinkExists
-
-
-proc createNginxConfig*(target: Container) {.async.} =
-  let x = target.simpleNginxConfig()
-  let filename = target.nginxConfigFile()
-  filename.createFile
-  writeFile(filename, x)
-  let enabledFile = target.nginxEnabledFile()
-  if not enabledFile.symlinkExists:
-    createSymlink(filename, enabledFile)
-  {.gcsafe.}: metrics.nginxConfigsWritten.labels(target.name).inc()
-
-proc createSimpleNginxConfig(target: Container) {.async.} =
-  let x = target.simpleNginxConfig()
-  let filename = target.nginxConfigFile
-  if filename.fileExists:
-    filename.removeFile()
-  filename.createFile
-  filename.writeFile(x)
-  target.enableInNginx()
-
-proc createHttpsNginxConfig(target: Container) {.async.} =
-  if target.isEnabledInNginx:
-    target.disableInNginx()
-  let maybeCert = target.getInstalledCert()
-  assert maybeCert.isSome
-  let cert = maybeCert.get()
-  let x = target.nginxConfigWithCert(cert)
-  let filename = target.nginxConfigFile
-  if filename.fileExists:
-    filename.removeFile()
-  filename.createFile
-  filename.writeFile(x)
-  target.enableInNginx()
 
 proc parseContainer*(filename: string): Container =
   {.gcsafe.}:
     var spec: ContainerSpec
     var s = newFileStream(filename)
+    defer: s.close()
     load(s, spec)
-    s.close()
     return newContainer(spec)
 
-proc runCertbot(target: Container) {.async.} =
-  let allHosts = target.allHosts()
-  let hostCmdLine = allHosts.map((x) => fmt"-d {x}").join(" ")
-  let certbotCmd = fmt"certbot certonly --nginx -n --keep {hostCmdLine} --email {email} --agree-tos"
-  echo certbotCmd
-  echo await certbotCmd.asyncExec()
-  {.gcsafe.}: metrics.letsEncryptRuns.labels(target.name).inc()
-  # metrics.incLetsEncryptRuns(@[target.name])
-  #
-proc isCertValid*(target: Container): bool =
-  let x = target.getInstalledCert()
-  return x.isSome and x.get().exp.valid
-
-proc isNginxConfigCorrect*(target: Container): bool =
-  var expectedContents: string
-  if target.isCertValid():
-    expectedContents = nginxConfigWithCert(target, target.getInstalledCert.get())
-  else:
-    expectedContents = target.simpleNginxConfig()
-  let actualContents = readFile(target.nginxConfigFile())
-  return expectedContents == actualContents
-
-proc isNginxConfigHttps*(target: Container): bool =
-  let expectedContents = nginxConfigWithCert(target, target.getInstalledCert.get())
-  let actualContents = readFile(target.nginxConfigFile())
-  return expectedContents == actualContents
 
 proc lookupDns(host: string): string =
   fmt"dig {host} +short".simpleExec()
@@ -301,36 +171,74 @@ proc lookupDns(host: string): string =
 proc lookupDns(target: Container): string =
   target.host.lookupDns()
 
+proc isConfigFile(filename: string): bool =
+  result = filename.endsWith(".yaml") or filename.endsWith(".yml")
 
-# Set to false, trying to figure out what
-# causes isWebsiteRunning() to randomly fail
-let ffHttpRequests = false
+proc getContainerConfigs*(directory: string = config.containerDir): seq[Container] =
+  discard directory.existsOrCreateDir
+  var containers: seq[Container] = newSeq[Container]()
+  for path in walkFiles(fmt"{directory}/*"):
+    logInfo(fmt"walking down {path}")
+    if path.isConfigFile():
+      containers.add(path.parseContainer())
+  return containers
 
-proc ensureContainer*(target: Container) {.async.} =
-  discard target.isWebsiteRunning()
-  if not target.isHealthy:
-    logInfo(fmt"{target.name} is not healthy, recreating")
-    await target.createContainer()
-  if not target.isCertValid():
-    logInfo(fmt"{target.name} does not have a valid cert, trying to fetch")
-    await target.createSimpleNginxConfig()
-    await target.runCertbot()
-  else:
-    if not target.isNginxConfigHttps():
-      logInfo(fmt"{target.name} creating nginx config")
-      await target.createHttpsNginxConfig()
-      if checkNginxService():
-        await reloadNginx()
-      else:
-        await restartNginx()
-    else:
-      logInfo(fmt"{target.name} seemed like it was fine, doing nothing")
-  # if ffHttpRequests:
-  #   if not target.isWebsiteRunning:
-  #     await target.createNginxConfig()
-  #     await target.runCertbot()
-  # else:
-  #   if not target.isCertValid():
-  #     await target.createNginxConfig()
-  #     await target.runCertbot()
-  #     await reloadNginx()
+type
+  ContainersCollection* = ref object of ManagedCollection[Container, DContainer]
+    dir: string
+
+
+proc newContainersCollection*(dir = config.containerDir):  ContainersCollection =
+  proc getExpected(): Future[seq[Container]] {.async.} =
+    return getContainerConfigs(dir)
+
+  proc getWorldState(): Future[seq[DContainer]] {.async.} =
+    return getContainers()
+
+  ContainersCollection(
+    dir: dir,
+    getExpected: getExpected,
+    getWorldState: getWorldState,
+    matches: (c: Container, dc: DContainer) => c.matches(dc),
+    remove: removeContainer,
+    create: createContainer
+  )
+
+proc filename(spec: ContainerSpec): string = fmt"{spec.name}.yaml"
+
+type 
+  ErrAlreadyExists* = object of ValueError
+  ErrDoesNotExist* = object of OSError
+
+proc deleteNamedContainer*(name: string, dir = config.containerDir) =
+  let filename = fmt"{name}.yaml"
+  let path = dir / filename
+  if not path.fileExists:
+    raise newException(ErrDoesNotExist, fmt"{path} doesn't exist")
+  path.removePath()
+
+proc writeFile*(spec: ContainerSpec, dir = config.containerDir) =
+  let path = dir / spec.filename
+  var s = newFileStream(path, fmWrite)
+  defer: s.close()
+  # Marking this as gcsafe just to make errors go away.
+  # Do not actually know if it should be
+  {.gcsafe.}:
+    dump(spec, s, handles = @[])
+
+proc add*(spec: ContainerSpec, dir = config.containerDir) =
+  let path = dir / spec.filename
+  if path.fileExists:
+    raise newException(ErrAlreadyExists, fmt"{path} already exists")
+  spec.writeFile()
+
+proc getContainerByName*(name: string, dir = config.containerDir): Option[Container] =
+  let path = dir / fmt"{name}.yaml"
+  if not path.fileExists:
+    return none(Container)
+  try:
+    let container = path.parseContainer()
+    return some(container)
+  except:
+    return none(Container)
+
