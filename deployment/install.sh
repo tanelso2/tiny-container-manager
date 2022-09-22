@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 
 set -x
+set -e
 
 skipGcr=false
 
-if [ $1 == '--skip-gcr' ]; then
+if [[ $1 == '--skip-gcr' ]]; then
     skipGcr=true
 fi
 
@@ -12,7 +13,7 @@ SRC_DIR="$PWD"
 
 TCM_DIR="/tcm"
 
-if [ $TCM_DIR != $SRC_DIR ]; then
+if [[ $TCM_DIR != $SRC_DIR ]]; then
     echo "Linking $TCM_DIR to $SRC_DIR"
     ln -s $SRC_DIR $TCM_DIR
 fi
@@ -23,7 +24,7 @@ apt-get update
 apt-get install -y docker.io \
                    libssl-dev
 
-if [ ! $skipGcr ]; then
+if [[ $skipGcr != "true" ]]; then
     DOCKER_CREDS_GCR_RELEASE="https://github.com/GoogleCloudPlatform/docker-credential-gcr/releases/download/v2.1.5/docker-credential-gcr_linux_amd64-2.1.5.tar.gz"
     T=$(mktemp -d)
     cd $T
