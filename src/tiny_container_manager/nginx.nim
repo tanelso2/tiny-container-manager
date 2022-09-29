@@ -262,7 +262,9 @@ proc getExpectedEnabledFiles(ncc: NginxConfigsCollection, enabledDir: string): F
       let filename = n.filename
       let target = ncc.dir / filename
       let filePath = enabledDir / filename
-      EnabledLink(filePath: filePath, target: target)
+      # Only care about enabled files if the available file exists
+      if target.fileExists:
+        EnabledLink(filePath: filePath, target: target)
 
 proc getActualEnabledFiles(dir: string): seq[NginxEnabledFile] =
   return collectFilesInDir(dir).mapIt(NginxEnabledFile(filePath: it))
