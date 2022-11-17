@@ -26,5 +26,4 @@ It's.... similar.... if your glasses are fogged... but hey it works and is curre
 
 * `s3fs` to mount s3 buckets into a container
 * mounts in general
-* api for remote configuration, instead of relying on files
-* automatic updates on the container images (probably related to the api)
+
