@@ -14,6 +14,7 @@ import
   tiny_container_manager/[
     collection,
     container,
+    container_collection,
     docker
   ]
 

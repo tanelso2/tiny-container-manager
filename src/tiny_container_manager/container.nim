@@ -3,22 +3,20 @@ import
   ./docker,
   ./metrics,
   ./config,
-  ./collection,
-  nim_utils/logline,
-  nim_utils/files,
+  nim_utils/[
+    files,
+    logline,
+    simple_yaml
+  ],
   asyncdispatch,
   httpclient,
   os,
   prometheus as prom,
   sequtils,
   std/options,
-  std/sugar,
   streams,
   strformat,
-  strutils,
-  sugar,
-  yaml,
-  yaml/serialization
+  strutils
 
 # TODO: Figure out difference between object and ref object.
 # I have read the docs before and I still don't get it
@@ -29,7 +27,28 @@ type
     containerPort*: int
     host*: string
 
-proc matches(target: Container, d: DContainer): bool =
+proc toYaml*(c: Container): YNode =
+  result = {
+    "name": toYaml(c.name),
+    "image": toYaml(c.image),
+    "containerPort": toYaml(c.containerPort),
+    "host": toYaml(c.host)
+  }.newYMap()
+
+proc ofYaml*(n: YNode, t: typedesc[Container]): Container =
+  expectYMap:
+    let name = n.getStr("name")
+    let image = n.getStr("image")
+    let containerPort = n.get("containerPort").toInt()
+    let host = n.getStr("host")
+    result = Container(
+      name: name,
+      image: image,
+      containerPort: containerPort,
+      host: host
+    )
+
+proc matches*(target: Container, d: DContainer): bool =
   # Names are prefaced by a slash due to docker internals
   # https://github.com/moby/moby/issues/6705
   let nameMatch = d.Names.contains(fmt"/{target.name}")
@@ -142,12 +161,11 @@ proc isWebsiteRunning*(target: Container): bool =
         .labels(target.host, "http", if result: "success" else: "failure")
         .inc()
 
-
 proc parseContainer*(filename: string): Container =
   {.gcsafe.}:
     var s = newFileStream(filename)
     defer: s.close()
-    load(s, result)
+    s.loadNode().ofYaml(Container)
 
 proc lookupDns(host: string): string =
   fmt"dig {host} +short".simpleExec()
@@ -167,28 +185,8 @@ proc getContainerConfigs*(directory: string = config.containerDir): seq[Containe
       containers.add(path.parseContainer())
   return containers
 
-type
-  ContainersCollection* = ref object of ManagedCollection[Container, DContainer]
-    dir: string
 
-
-proc newContainersCollection*(dir = config.containerDir):  ContainersCollection =
-  proc getExpected(): Future[seq[Container]] {.async.} =
-    return getContainerConfigs(dir)
-
-  proc getWorldState(): Future[seq[DContainer]] {.async.} =
-    return getContainers()
-
-  ContainersCollection(
-    dir: dir,
-    getExpected: getExpected,
-    getWorldState: getWorldState,
-    matches: (c: Container, dc: DContainer) => c.matches(dc),
-    remove: removeContainer,
-    create: createContainer
-  )
-
-proc filename(spec: Container): string = fmt"{spec.name}.yaml"
+proc filename*(spec: Container): string = fmt"{spec.name}.yaml"
 
 type 
   ErrAlreadyExists* = object of ValueError
@@ -205,10 +203,7 @@ proc writeFile*(c: Container, dir = config.containerDir) =
   let path = dir / c.filename
   var s = newFileStream(path, fmWrite)
   defer: s.close()
-  # Marking this as gcsafe just to make errors go away.
-  # Do not actually know if it should be
-  {.gcsafe.}:
-    dump(c, s, handles = @[])
+  s.write(c.toYaml().toString())
 
 proc add*(c: Container, dir = config.containerDir) =
   let path = dir / c.filename

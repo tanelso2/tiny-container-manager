@@ -8,7 +8,9 @@ import
   tiny_container_manager/[
     collection,
     container,
-    nginx,
+    container_collection,
+    nginx/config_collection,
+    nginx/enabled_collection,
     shell_utils
   ],
   test_utils/[
