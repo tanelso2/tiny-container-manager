@@ -2,8 +2,11 @@ import
   tiny_container_manager/[
     collection,
     container,
+    container_collection,
     docker,
-    nginx
+    nginx/conffile,
+    nginx/config_collection,
+    nginx/enabled_collection
   ],
   asyncdispatch,
   sugar

@@ -2,7 +2,8 @@ import
   asyncdispatch,
   os,
   strformat,
-  strutils
+  strutils,
+  std/tempfiles
 
 import
   tiny_container_manager/[
@@ -44,3 +45,10 @@ block ReadingFromFile:
   assert c.containerPort == containerPort
   assert c.host == host
 
+block WritingFile:
+  let tmpDir = createTempDir("tcontainer-writingfile-","")
+  let c = testContainer()
+  c.writeFile(dir = tmpDir)
+  let fname = tmpDir / c.filename()
+  let c2 = parseContainer(fname)
+  assert c2 == c

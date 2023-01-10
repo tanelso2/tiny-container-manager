@@ -2,7 +2,9 @@ import
   tiny_container_manager/[
     collection,
     container,
-    nginx,
+    container_collection,
+    nginx/conffile,
+    nginx/config_collection,
     shell_utils
   ],
   test_utils/[

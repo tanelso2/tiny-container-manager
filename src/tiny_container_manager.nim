@@ -15,12 +15,14 @@ import
   times,
   tiny_container_manager/[
     auth,
+    container_collection,
     collection,
     config,
     container,
     json_utils,
     metrics,
-    nginx,
+    nginx/config_collection,
+    nginx/enabled_collection,
     shell_utils
   ],
   nim_utils/logline,
