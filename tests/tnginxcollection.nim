@@ -1,9 +1,14 @@
 import
-  tiny_container_manager/collection,
-  tiny_container_manager/collection_test_utils,
-  tiny_container_manager/container,
-  tiny_container_manager/nginx,
-  tiny_container_manager/shell_utils,
+  tiny_container_manager/[
+    collection,
+    container,
+    nginx,
+    shell_utils
+  ],
+  test_utils/[
+    collection_testing,
+    container_testing
+  ],
   asyncdispatch,
   std/os,
   std/sequtils,
@@ -19,14 +24,7 @@ let mockConfig = NginxConfig(
     ContainerRef(
       path: "/",
       port: 1234,
-      container: newContainer(
-        spec = ContainerSpec(
-          name: "example",
-          image: "nginx:latest",
-          containerPort: 80,
-          host: "example.com"
-        )
-      )
+      container: testContainer()
     )
   ]
 )

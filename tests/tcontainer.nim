@@ -11,19 +11,8 @@ import
     shell_utils
   ]
 
-proc setupTmpDir(): string =
-  let f = "mktemp -d".simpleExec().strip()
-  fmt"{f}/sites-available".createDir()
-  fmt"{f}/sites-enabled".createDir()
-  return f
-
-proc testContainer(): Container =
-  let spec = ContainerSpec(name: "test",
-                           image: "nginx:latest",
-                           containerPort: 80,
-                           host: "example.com")
-  let testC = newContainer(spec = spec)
-  return testC
+import
+  test_utils/container_testing
 
 if dockerRunning():
   block CreatingAContainer:

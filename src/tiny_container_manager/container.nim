@@ -23,24 +23,11 @@ import
 # TODO: Figure out difference between object and ref object.
 # I have read the docs before and I still don't get it
 type
-  ContainerSpec* = object of RootObj
+  Container* = object of RootObj
     name*: string
     image*: string
     containerPort*: int
     host*: string
-  Container* = object of ContainerSpec
-
-proc spec*(c: Container): ContainerSpec =
-  ContainerSpec(name: c.name,
-                image: c.image,
-                containerPort: c.containerPort,
-                host: c.host)
-
-proc newContainer*(spec: ContainerSpec): Container =
-  return Container(name: spec.name,
-                   image: spec.image,
-                   containerPort: spec.containerPort,
-                   host: spec.host)
 
 proc matches(target: Container, d: DContainer): bool =
   # Names are prefaced by a slash due to docker internals
@@ -158,12 +145,9 @@ proc isWebsiteRunning*(target: Container): bool =
 
 proc parseContainer*(filename: string): Container =
   {.gcsafe.}:
-    var spec: ContainerSpec
     var s = newFileStream(filename)
     defer: s.close()
-    load(s, spec)
-    return newContainer(spec)
-
+    load(s, result)
 
 proc lookupDns(host: string): string =
   fmt"dig {host} +short".simpleExec()
@@ -204,7 +188,7 @@ proc newContainersCollection*(dir = config.containerDir):  ContainersCollection 
     create: createContainer
   )
 
-proc filename(spec: ContainerSpec): string = fmt"{spec.name}.yaml"
+proc filename(spec: Container): string = fmt"{spec.name}.yaml"
 
 type 
   ErrAlreadyExists* = object of ValueError
@@ -217,20 +201,20 @@ proc deleteNamedContainer*(name: string, dir = config.containerDir) =
     raise newException(ErrDoesNotExist, fmt"{path} doesn't exist")
   path.removePath()
 
-proc writeFile*(spec: ContainerSpec, dir = config.containerDir) =
-  let path = dir / spec.filename
+proc writeFile*(c: Container, dir = config.containerDir) =
+  let path = dir / c.filename
   var s = newFileStream(path, fmWrite)
   defer: s.close()
   # Marking this as gcsafe just to make errors go away.
   # Do not actually know if it should be
   {.gcsafe.}:
-    dump(spec, s, handles = @[])
+    dump(c, s, handles = @[])
 
-proc add*(spec: ContainerSpec, dir = config.containerDir) =
-  let path = dir / spec.filename
+proc add*(c: Container, dir = config.containerDir) =
+  let path = dir / c.filename
   if path.fileExists:
     raise newException(ErrAlreadyExists, fmt"{path} already exists")
-  spec.writeFile()
+  c.writeFile()
 
 proc getContainerByName*(name: string, dir = config.containerDir): Option[Container] =
   let path = dir / fmt"{name}.yaml"
