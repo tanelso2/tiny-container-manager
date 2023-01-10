@@ -1,129 +1,125 @@
-import
-  yaml/serialization,
-  streams
+import 
+  std/tables
 
-type 
-  MountKind* = enum
-    mkTmpfs
-    mkS3fs
-  Mount* = object
-    mountPoint: string
-    case kind: MountKind
-    of mkTmpfs:
-      discard
-    of mkS3fs:
-      key: string
-      secret: string
-      bucket: string
-  Con* = object of RootObj
-    name*: string
-    mounts*: seq[Mount]
+import 
+  tiny_container_manager/yaml_utils {.all.}
 
-let noMounts = Con(name:"example", mounts: @[])
+proc roundTrip(n: YNode): YNode =
+  n.toString().loadNode()
 
-let m = Mount(mountPoint: "/etc/tmpfs", kind: mkTmpfs)
+proc checkRoundtrip(n: YNode) =
+  assert n.toString() == n.toString().loadNode().toString()
 
-var c2 = Con(name: "c2", mounts: @[m])
+proc checkRoundtrip(s: string) =
+  checkRoundtrip s.loadNode()
 
-var s = newFileStream("out.yaml", fmWrite)
-dump(noMounts, s)
-s.close()
-
-s = newFileStream("out2.yaml", fmWrite)
-dump(c2,s)
-s.close()
-
-import std/typeinfo
-
-var x: Any
-
-x = c2.toAny
-
-# echo x.kind
-# for (name,i) in x.fields:
-#   echo name
-
-import macros
-
-macro dumpTypeImpl(x: typed): untyped =
-  newLit(x.getTypeImpl.repr)
-
-# echo c2.dumpTypeImpl()
-
-import std/tables
+const divider = "\n~~~~~~~~~~~~\n"
+template echod(s) =
+  echo s
+  echo divider
 
 let sampleNodeStr = """
 { "i": 1, "f": 0.1, "s": "hello"}
 """
+checkRoundtrip sampleNodeStr
 
-import yaml/dom
-import sequtils
+var mynode: YNode 
+mynode = loadNode(sampleNodeStr)
+checkRoundtrip mynode
 
-var node: YamlNode
+var sampleStr = """
+a:
+- 1
+- 2
+- 3
+b: false
+"""
+checkRoundtrip sampleStr
 
-load(sampleNodeStr,node)
+mynode = loadNode(sampleStr)
+checkRoundtrip mynode
 
-# echo node.kind
+let intList: YNode = newYList(@[
+    newYString("1"), 
+    newYString("2"), 
+    newYString("3")
+])
 
-# TODO: yMapping.fields: TableRef[YamlNode,YamlNode] => TableRef[string,YamlNode] conversion function
-# Wait... can't because of what YamlNode actually holds
+checkRoundtrip intList
 
-type
-  MyNodeKind = enum
-    mnString, mnList, mnMap
-  MyNode {.implicit.} = object
-    case kind: MyNodeKind
-    of mnString:
-      strVal: string
-    of mnList:
-      listVal: seq[MyNode]
-    of mnMap:
-      mapVal: TableRef[string, MyNode]
+let heteroList: YNode = newYList(@[
+  newYString("1"), 
+  newYString("2"), 
+  newYList(@[newYString("3"), newYString("4")]),
+  newYString("5")
+])
+checkRoundtrip heteroList
 
-proc get(o: TableRef[YamlNode, YamlNode], n: string): YamlNode =
-  let x = YamlNode(
-    kind: yScalar, 
-    content: n, 
-    tag: yTagExclamationMark)
-  if not o.hasKey(x):
-    raise newException(ValueError, "Could not find")
-  return o[x]
 
-proc simplifyName(k: YamlNode): string =
-  case k.kind
-  of yScalar:
-    return k.content
-  else:
-    raise newException(ValueError, "Cannot simplify the name of a non-scalar")
+let smallList: YNode = newYList(@["a", "b", "c", "d"])
+checkRoundtrip smallList
 
-proc translate(n: YamlNode): MyNode =
-  case n.kind
-  of yMapping:
-    let t = newTable[string,MyNode](n.fields.len)
-    for k,v in n.fields.pairs:
-      let name = simplifyName(k)
-      t[name] = translate(v)
-    result = MyNode(kind: mnMap, mapVal: t)
-  of ySequence:
-    let elems = n.elems.mapIt(translate(it))
-    result = MyNode(kind: mnList, listVal: elems)
-  else:
-    result = MyNode(kind: mnString, strVal: n.content)
+let t = {
+  "x": smallList, 
+  "y": newYString("yay"),
+  "z": heteroList,
+  "z2": heteroList,
+}.newTable()
 
-# echo len(node.fields)
-# echo node.fields.get("i")
+let mapExample: YNode = newYMap(t)
+checkRoundtrip mapExample
 
-# import json
+let t2 = {
+  "apple": newYString("red"),
+  "orange": heteroList,
+  "banana": mapExample
+}.newTable()
 
-# var jnode: JsonNode
+let map2: YNode = newYMap(t2)
+checkRoundtrip map2
 
-# load(sampleNodeStr, jnode)
 
-# echo jnode
+# Check Maps under lists
+let map3 = newYMap({
+  "example1": newYList(@[newYString("0.12"), map2]),
+  "example2": mapExample
+})
 
-# Needs tags
-var mynode: MyNode
+checkRoundtrip map3
 
-mynode = node.translate()
+var s = """
+a: 1
+b: 2
+c: 
+  d: 4
+  e: 5
+  f: 
+   - 6
+   - 7
+   - 8
+"""
+checkRoundtrip s
 
-echo mynode
+# Empty list
+let emptyNodes: seq[YNode] = @[]
+let emptyList = newYList(emptyNodes)
+checkRoundtrip emptyList
+let emptyList2 = emptyList.toString().loadNode()
+assert emptyList2.kind == ynList
+assert emptyList2.listVal.len() == 0
+
+# empty map
+let emptyMap = newYMap(newTable[string,YNode]())
+checkRoundtrip emptyMap
+let emptyMap2 = emptyMap.toString().loadNode()
+checkRoundtrip emptyMap2
+assert emptyMap2.kind == ynMap
+assert emptyMap2.mapVal.len() == 0
+
+# empty string
+let emptyString = newYString("")
+checkRoundtrip emptyString
+let emptyStringList = newYList(@[emptyString, emptyString])
+checkRoundtrip emptyStringList
+let emptyStringMap = newYMap({"a": emptyString, "b": newYString("1")})
+checkRoundtrip emptyStringMap
