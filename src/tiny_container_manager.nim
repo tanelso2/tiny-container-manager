@@ -129,13 +129,13 @@ router application:
   get "/containers":
     swallowErrors:
       authRequired:
-        let containers = getContainerConfigs().mapIt(it.spec())
+        let containers = getContainerConfigs()
         jsonResp containers
   post "/container":
     swallowErrors:
       authRequired:
         logInfo fmt"Got a POST"
-        let spec = request.jsonBody(ContainerSpec)
+        let spec = request.jsonBody(Container)
         try:
           spec.add()
         except ErrAlreadyExists:
@@ -159,11 +159,11 @@ router application:
           resp Http404
         let c = maybeContainer.get()
         let newImage = request.body
-        let newSpec = ContainerSpec(name: c.name,
-                                    image: newImage,
-                                    host: c.host,
-                                    containerPort: c.containerPort)
-        newSpec.writeFile()
+        let newC = Container(name: c.name,
+                             image: newImage,
+                             host: c.host,
+                             containerPort: c.containerPort)
+        newC.writeFile()
         respOk
 
 proc runServer =
@@ -222,17 +222,8 @@ proc main() =
 
   runForever()
 
-# proc test() =
-#   for _ in 1..10:
-#     let c1 = Container(name: "test", image: "", containerPort: 9090, host: "thomasnelson.me")
-#     echo c1.isWebsiteRunning()
-#     let c2 = Container(name: "test", image: "", containerPort: 9090, host: "findmythesis.com")
-#     echo c2.isWebsiteRunning()
-#     let c3 = Container(name: "test", image: "", containerPort: 9090, host: "pureinvaders.com")
-#     echo c3.isWebsiteRunning()
 
 when isMainModule:
-  # test()
   main()
   # metrics.uptimeMetric.labels("blahblah.com").inc()
   # echo metrics.getOutput()

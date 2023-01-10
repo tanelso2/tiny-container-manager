@@ -13,17 +13,15 @@ import
 import
   tiny_container_manager/[
     collection,
-    collection_test_utils,
     container,
     docker
   ]
 
-let testC = newContainer(spec = ContainerSpec(
-  name: "test",
-  image: "nginx:latest",
-  containerPort: 80,
-  host: "example.com"
-))
+import
+  test_utils/collection_testing,
+  test_utils/container_testing
+
+let testC = testContainer()
 
 if dockerRunning():
   block CleanSlate:

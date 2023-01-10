@@ -1,8 +1,10 @@
 import
-  ./collection,
-  ./container,
-  ./docker,
-  ./nginx,
+  tiny_container_manager/[
+    collection,
+    container,
+    docker,
+    nginx
+  ],
   asyncdispatch,
   sugar
 

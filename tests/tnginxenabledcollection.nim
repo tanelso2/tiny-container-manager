@@ -1,16 +1,19 @@
 import
-  tiny_container_manager/collection,
-  tiny_container_manager/collection_test_utils,
-  tiny_container_manager/container,
-  tiny_container_manager/nginx,
-  tiny_container_manager/shell_utils,
   asyncdispatch,
-  std/os,
-  std/sequtils,
-  std/strformat,
-  std/sugar,
+  os,
+  sequtils,
+  strformat,
   std/tempfiles,
-  nim_utils/logline
+  nim_utils/logline,
+  tiny_container_manager/[
+    collection,
+    container,
+    nginx,
+    shell_utils
+  ],
+  test_utils/[
+    collection_testing,
+  ]
 
 
 proc mkMockLink(enabledDir: string, targetDir: string): EnabledLink =

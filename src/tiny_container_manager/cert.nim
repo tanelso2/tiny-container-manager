@@ -29,7 +29,6 @@ proc getRegex(): Regex =
 
 let certbotCertRegex* = getRegex()
 
-
 type
   Cert* = ref object of RootObj
     name*: string
