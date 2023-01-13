@@ -5,8 +5,7 @@ import
   ./config,
   nim_utils/[
     files,
-    logline,
-    simple_yaml
+    logline
   ],
   asyncdispatch,
   httpclient,
@@ -16,7 +15,8 @@ import
   std/options,
   streams,
   strformat,
-  strutils
+  strutils,
+  yanyl
 
 # TODO: Figure out difference between object and ref object.
 # I have read the docs before and I still don't get it
@@ -27,26 +27,7 @@ type
     containerPort*: int
     host*: string
 
-proc toYaml*(c: Container): YNode =
-  result = {
-    "name": toYaml(c.name),
-    "image": toYaml(c.image),
-    "containerPort": toYaml(c.containerPort),
-    "host": toYaml(c.host)
-  }.newYMap()
-
-proc ofYaml*(n: YNode, t: typedesc[Container]): Container =
-  expectYMap:
-    let name = n.getStr("name")
-    let image = n.getStr("image")
-    let containerPort = n.get("containerPort").toInt()
-    let host = n.getStr("host")
-    result = Container(
-      name: name,
-      image: image,
-      containerPort: containerPort,
-      host: host
-    )
+deriveYaml Container
 
 proc matches*(target: Container, d: DContainer): bool =
   # Names are prefaced by a slash due to docker internals
