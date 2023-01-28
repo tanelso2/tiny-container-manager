@@ -161,7 +161,6 @@ proc getContainerConfigs*(directory: string = config.containerDir): seq[Containe
   discard directory.existsOrCreateDir
   var containers: seq[Container] = newSeq[Container]()
   for path in walkFiles(fmt"{directory}/*"):
-    logInfo(fmt"walking down {path}")
     if path.isConfigFile():
       containers.add(path.parseContainer())
   return containers
