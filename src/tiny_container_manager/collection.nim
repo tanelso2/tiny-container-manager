@@ -49,3 +49,6 @@ proc ensure*[I,E](this: ManagedCollection[I,E]): Future[ChangeResult[I,E]] {.asy
 
 proc anythingChanged*[I,E](this: ChangeResult[I,E]): bool =
   len(this.added) != 0 or len(this.removed) != 0
+
+proc ensureDiscardResults*[I,E](this: ManagedCollection[I,E]): Future[void] {.async.} =
+  asyncCheck this.ensure()

@@ -3,6 +3,7 @@ import
 
 import
   asyncdispatch,
+  asyncfutures,
   httpclient,
   json,
   logging,
@@ -86,12 +87,19 @@ proc mainLoop(disableSetup = false, useHttps = true) {.async.} =
 
     try:
       # TODO: These don't need to run sequentially...
-      logInfo "Running containersCollection"
-      discard await cc.ensure()
-      logInfo "Running nginx configs collection"
-      discard await ncc.ensure()
-      logInfo "Running nginx enabled symlinks collection"
-      discard await  nec.ensure()
+      # logInfo "Running containersCollection"
+      # discard await cc.ensure()
+      # logInfo "Running nginx configs collection"
+      # discard await ncc.ensure()
+      # logInfo "Running nginx enabled symlinks collection"
+      # discard await  nec.ensure()
+      logInfo "Running all collections concurrently"
+      let futs = [
+        cc.ensureDiscardResults(),
+        ncc.ensureDiscardResults(),
+        nec.ensureDiscardResults()
+      ]
+      await all(futs)
     except:
       let
         e = getCurrentException()
