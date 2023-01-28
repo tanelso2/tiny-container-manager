@@ -7,7 +7,7 @@ license       = "MIT"
 srcDir        = "src"
 bin           = @["tiny_container_manager"]
 
-const nimVersion = "1.6.6"
+const nimVersion = "1.6.8"
 import strformat
 
 # Dependencies

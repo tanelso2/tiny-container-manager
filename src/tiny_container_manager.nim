@@ -42,10 +42,6 @@ proc runCertbotForAll(containers: seq[Container]) =
   echo certbotCmd
   echo certbotCmd.simpleExec()
 
-proc checkDiskUsage() =
-  let x = "df -i".simpleExec()
-  let y: string = x.split("\n").filter(z => z.contains("/dev/vda1"))[0]
-
 proc cleanUpLetsEncryptBackups() =
   let dir = "/var/lib/letsencrypt/backups"
   let anHourAgo = getTime() + initTimeInterval(hours = -1)
@@ -62,7 +58,7 @@ proc cleanUpLetsEncryptBackups() =
   logDebug(fmt"Deleted {filesDeleted} backup files")
   metrics.letsEncryptBackupsDeleted.inc(filesDeleted)
 
-const loopSeconds = 30
+const loopSeconds = 15 
 
 proc loopSetup() {.async.} =
   logInfo("Setting up loop")
@@ -80,7 +76,7 @@ proc mainLoop(disableSetup = false, useHttps = true) {.async.} =
   let ncc = newConfigsCollection(cc, dir = "/etc/nginx/sites-available", useHttps=useHttps)
   let nec = newEnabledCollection(ncc, enabledDir = "/etc/nginx/sites-enabled")
   logInfo("Starting loop")
-  var i = 0
+  var i: Natural = 0
   while true:
     metrics.incRuns()
     {.gcsafe.}: metrics.iters.set(i)
