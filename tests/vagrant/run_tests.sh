@@ -26,7 +26,7 @@ vagrant up
 
 sleep 60
 
-vagrant ssh -c "sudo /tcm/tests/vagrant/run_tests_in_vm.sh"
+vagrant ssh -c "sudo bash -c /tcm/tests/vagrant/run_tests_in_vm.sh"
 
 if [ $printLogs ]; then
     vagrant ssh -c "sudo journalctl -u tiny-container-manager.service | cat"

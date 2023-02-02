@@ -39,6 +39,7 @@ proc eventHandlerSetup*(em: EventManager,
 
   proc handleRunCheck(e: Event) {.async,gcsafe.} =
     assertEvent e, evRunCheck
+    logInfo("Running all the checks!")
     metrics.incRuns()
     {.gcsafe.}:
       asyncCheck cc.ensureDiscardResults()

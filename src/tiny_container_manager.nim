@@ -163,13 +163,10 @@ proc main() =
     setLogFilter(lvlInfo)
   if opts.no_management:
     logInfo "No management mode enabled, not starting the mainLoop"
-    runServer()
   else:
     asyncCheck mainLoop(disableSetup=disableSetup, useHttps=useHttps)
-  #runServerThreaded()
-
   runForever()
-
+  #runServer()
 
 when isMainModule:
   main()

@@ -18,7 +18,7 @@ proc countDockerContainers(): int =
 let nginxConfigFile = "/etc/nginx/sites-available/example.conf"
 let nginxEnabledFile = "/etc/nginx/sites-enabled/example.conf"
 
-let tcmConfigFile = "/opt/tiny-container-manager/example.yaml"
+let tcmConfigFile = "/opt/tiny-container-manager/containers/example.yaml"
 
 block Before:
   assert countDockerContainers() == 0, fmt"{countDockerContainers()} != 0"
