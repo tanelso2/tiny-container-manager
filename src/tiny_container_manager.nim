@@ -87,7 +87,7 @@ proc main() =
   var opts = p.parse(commandLineParams())
 
   let disableSetup = opts.disable_setup
-  let useHttps = not opts.disable_https
+  let useHttps = not opts.disable_https and defaultConfig.httpsEnabled
   if opts.debug:
     debugMode = true
     setLogFilter(lvlDebug)

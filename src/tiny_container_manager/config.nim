@@ -16,6 +16,7 @@ type
     keysDir*: string
     tcmHost*: string
     tcmApiPort*: int
+    httpsEnabled*: bool
 
 const defaultConfig*: TCMConfig = TCMConfig(
   email: "tanelso2@gmail.com",
@@ -23,5 +24,6 @@ const defaultConfig*: TCMConfig = TCMConfig(
   containerDir: configDir / "containers",
   keysDir: configDir / "keys",
   tcmHost: "tcm.thomasnelson.me",
-  tcmApiPort: 6969
+  tcmApiPort: 6969,
+  httpsEnabled: false
 )
