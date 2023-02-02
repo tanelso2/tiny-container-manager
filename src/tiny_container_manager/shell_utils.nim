@@ -34,6 +34,7 @@ proc asyncRunInShell*(x: seq[string]): Future[string] =
   proc cb(_: AsyncFD): bool  =
     defer: p.close()
     let exitCode = p.peekExitCode
+    logInfo fmt"Trying to read results of {process=}"
     if exitCode == -1:
       {.gcsafe.}: logError("Process never started, something's wrong")
     if exitCode != 0:

@@ -97,10 +97,10 @@ proc main() =
     logInfo "No management mode enabled, not starting the mainLoop"
   else:
     asyncCheck mainLoop(disableSetup=disableSetup, useHttps=useHttps)
-  runServerThreaded()
+  # runServerThreaded()
   # # asyncCheck runServer()
-  runForever()
-  # runServer()
+  # runForever()
+  runServer()
 
 when isMainModule:
   main()
