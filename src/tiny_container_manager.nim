@@ -9,17 +9,19 @@ import
   logging,
   strformat,
   os,
-  prometheus as prom,
   strutils,
   sequtils,
   sugar,
   times,
   tiny_container_manager/[
     auth,
+    cert,
     container_collection,
     collection,
     config,
     container,
+    events,
+    handlers,
     json_utils,
     metrics,
     nginx/config_collection,
@@ -30,33 +32,6 @@ import
   jester
 
 var debugMode = false
-
-let client = newHttpClient(maxRedirects=0)
-
-proc runCertbotForAll(containers: seq[Container]) =
-  var domainFlags = ""
-  let domains = containers.map(proc(c: Container): string = c.host)
-  let domainsWithFlags = domains.map((x) => fmt"-d {x}")
-  let d = domainsWithFlags.join(" ")
-  let certbotCmd = fmt"certbot run --nginx -n --keep {d} --email {config.email} --agree-tos"
-  echo certbotCmd
-  echo certbotCmd.simpleExec()
-
-proc cleanUpLetsEncryptBackups() =
-  let dir = "/var/lib/letsencrypt/backups"
-  let anHourAgo = getTime() + initTimeInterval(hours = -1)
-  var filesDeleted = 0
-  for (fileType, path) in walkDir(dir):
-    # a < b if a happened before b
-    if path.getCreationTime() < anHourAgo:
-      if fileType == pcFile:
-        path.removeFile()
-      if fileType == pcDir:
-        path.removeDir()
-      filesDeleted += 1
-
-  logDebug(fmt"Deleted {filesDeleted} backup files")
-  metrics.letsEncryptBackupsDeleted.inc(filesDeleted)
 
 const loopSeconds = 15 
 
@@ -70,49 +45,17 @@ proc loopSetup() {.async.} =
   await setupFirewall()
 
 proc mainLoop(disableSetup = false, useHttps = true) {.async.} =
-  if not disableSetup:
-    await loopSetup()
+  let em = newManager()
   let cc = newContainersCollection()
   let ncc = newConfigsCollection(cc, dir = "/etc/nginx/sites-available", useHttps=useHttps)
   let nec = newEnabledCollection(ncc, enabledDir = "/etc/nginx/sites-enabled")
+
+  await eventEmitterSetup(em)
+  await eventHandlerSetup(em,cc,ncc,nec)
+
+  if not disableSetup:
+    await loopSetup()
   logInfo("Starting loop")
-  var i: Natural = 0
-  while true:
-    metrics.incRuns()
-    {.gcsafe.}: metrics.iters.set(i)
-
-    try:
-      # TODO: These don't need to run sequentially...
-      # logInfo "Running containersCollection"
-      # discard await cc.ensure()
-      # logInfo "Running nginx configs collection"
-      # discard await ncc.ensure()
-      # logInfo "Running nginx enabled symlinks collection"
-      # discard await  nec.ensure()
-      logInfo "Running all collections concurrently"
-      let futs = [
-        cc.ensureDiscardResults(),
-        ncc.ensureDiscardResults(),
-        nec.ensureDiscardResults()
-      ]
-      await all(futs)
-    except:
-      let
-        e = getCurrentException()
-        msg = getCurrentExceptionMsg()
-      logError fmt"Got exception {repr(e)} with message {msg}"
-
-    logInfo("Cleaning up the letsencrypt backups")
-    cleanUpLetsEncryptBackups()
-
-    if not checkNginxService():
-      await restartNginx()
-
-    logInfo("Going to sleep")
-    # Make sure log messages are displayed promptly
-    flushFile(stdout)
-    i+=1
-    await sleepAsync(loopSeconds * 1000)
 
 template swallowErrors*(body: untyped) =
   try:
@@ -223,13 +166,10 @@ proc main() =
     runServer()
   else:
     asyncCheck mainLoop(disableSetup=disableSetup, useHttps=useHttps)
-  runServerThreaded()
-  # asyncCheck runServer()
+  #runServerThreaded()
 
   runForever()
 
 
 when isMainModule:
   main()
-  # metrics.uptimeMetric.labels("blahblah.com").inc()
-  # echo metrics.getOutput()

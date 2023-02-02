@@ -1,7 +1,8 @@
 import
   sequtils,
   sugar,
-  asyncdispatch
+  asyncdispatch,
+  ./async_utils
 
 type
   ManagedCollection*[I, E] = ref object of RootObj
@@ -46,6 +47,10 @@ proc ensure*[I,E](this: ManagedCollection[I,E]): Future[ChangeResult[I,E]] {.asy
   result = ChangeResult[I,E](added: created, removed: removed)
   if result.anythingChanged:
     await this.onChange(result)
+
+proc ensureLoop*[I,E](this: ManagedCollection[I,E], sleepSeconds: int) {.async.} =
+  let f = () => this.ensureDiscardResults()
+  asyncLoop f, sleepSeconds
 
 proc anythingChanged*[I,E](this: ChangeResult[I,E]): bool =
   len(this.added) != 0 or len(this.removed) != 0

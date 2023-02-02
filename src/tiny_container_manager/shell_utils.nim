@@ -6,7 +6,13 @@ import
   strutils,
   nim_utils/logline
 
+type SyncExec* = object
+
+# TODO In Nim2 use forbids to make sure this isn't called anywhere in the async event loop
+proc syncExec() {.tags: [SyncExec].} = discard
+
 proc runInShell*(x: openArray[string]): string =
+  syncExec()
   let process = x[0]
   let args = x[1..^1]
   let p = startProcess(process, args=args, options={poUsePath})
@@ -45,16 +51,16 @@ proc createFile*(filename: string) =
   open(filename, fmWrite).close()
 
 proc installSnap*() {.async.} =
-  echo await asyncExec("sudo snap install core")
-  echo await asyncExec("sudo snap refresh core")
+  echo await asyncExec("snap install core")
+  echo await asyncExec("snap refresh core")
 
 proc installCertbot*() {.async.} =
   await installSnap()
-  echo await asyncExec("sudo snap install --classic certbot")
+  echo await asyncExec("snap install --classic certbot")
 
 proc installNginx*() {.async.} =
-  echo await asyncExec("sudo apt-get update")
-  echo await asyncExec("sudo apt-get install -y nginx")
+  echo await asyncExec("apt-get update")
+  echo await asyncExec("apt-get install -y nginx")
 
 proc restartNginx*() {.async.} =
   let restartNginxCmd = fmt"systemctl restart nginx"
@@ -66,12 +72,12 @@ proc reloadNginx*() {.async.} =
   discard await cmd.asyncExec()
 
 proc setupFirewall*() {.async.} =
-  echo await asyncExec("sudo ufw default deny incoming")
-  echo await asyncExec("sudo ufw default allow outgoing")
-  echo await asyncExec("sudo ufw allow ssh")
-  echo await asyncExec("sudo ufw allow http")
-  echo await asyncExec("sudo ufw allow https")
-  echo await asyncExec("sudo ufw enable")
+  echo await asyncExec("ufw default deny incoming")
+  echo await asyncExec("ufw default allow outgoing")
+  echo await asyncExec("ufw allow ssh")
+  echo await asyncExec("ufw allow http")
+  echo await asyncExec("ufw allow https")
+  echo await asyncExec("ufw enable")
 
 proc checkNginxService*(): bool =
   let cmd = "systemctl status nginx.service"

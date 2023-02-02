@@ -1,9 +1,13 @@
 import
+    os,
     std/re,
     strutils,
     strformat,
     sequtils,
-    ./shell_utils
+    times,
+    ./metrics,
+    ./shell_utils,
+    nim_utils/logline
 
 proc makeLabeledLineRegex(label: string): string =
     return r"\s*" & label & r":\s+(.*)\s*$"
@@ -79,3 +83,19 @@ proc parseCerts*(s: string): seq[Cert] =
 proc getAllCertbotCerts*(): seq[Cert] =
   let output = "certbot certificates".simpleExec()
   return output.parseCerts()
+
+proc cleanUpLetsEncryptBackups*() =
+  let dir = "/var/lib/letsencrypt/backups"
+  let anHourAgo = getTime() + initTimeInterval(hours = -1)
+  var filesDeleted = 0
+  for (fileType, path) in walkDir(dir):
+    # a < b if a happened before b
+    if path.getCreationTime() < anHourAgo:
+      if fileType == pcFile:
+        path.removeFile()
+      if fileType == pcDir:
+        path.removeDir()
+      filesDeleted += 1
+
+  logDebug(fmt"Deleted {filesDeleted} backup files")
+  metrics.letsEncryptBackupsDeleted.inc(filesDeleted)
