@@ -23,6 +23,7 @@ proc eventHandlerSetup*(em: EventManager,
                         cc: ContainersCollection,
                         ncc: NginxConfigsCollection,
                         nec: NginxEnabledCollection) {.async.} =
+
   proc handleFlush(e: Event) {.async.} =
     assertEvent e, evFlushStdout
     flushFile(stdout)
@@ -64,8 +65,8 @@ proc eventHandlerSetup*(em: EventManager,
     logInfo("Incrementing metrics")
     metrics.incRuns()
 
-  em.registerHandler(evRunCheck, handleIncRunCount)
-  em.registerHandler(evRunCheck, handleRunCC)
+  # em.registerHandler(evRunCheck, handleIncRunCount)
+  # em.registerHandler(evRunCheck, handleRunCC)
   em.registerHandler(evRunCheck, handleRunNCC)
   em.registerHandler(evRunCheck, handleRunNEC)
 

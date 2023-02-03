@@ -35,7 +35,7 @@ host: example.com
   tcmConfigFile.writeFile(fileContents)
 block Waiting:
   assert tcmConfigFile.fileType == ftFile
-  let timeoutSeconds = 60
+  let timeoutSeconds = 30
   sleep(timeoutSeconds * 1000)
 block Checking:
   assert tcmConfigFile.fileType == ftFile
