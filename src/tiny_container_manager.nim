@@ -6,6 +6,7 @@ import
   strutils,
   segfaults,
   sequtils,
+  strformat,
   tiny_container_manager/[
     api_server,
     container_collection,
@@ -88,8 +89,11 @@ proc main() =
   else:
     asyncCheck mainLoop(disableSetup=disableSetup, useHttps=useHttps)
   # runServerThreaded()
-  runForever()
-  # runServer()
+  while true:
+    try:
+      runForever()
+    except:
+      logError fmt"{getCurrentExceptionMsg()}"
 
 when isMainModule:
   main()
