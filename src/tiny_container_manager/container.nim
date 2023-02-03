@@ -82,7 +82,9 @@ proc createContainer*(target: Container) {.async.} =
   let cmd = fmt"docker run --name {target.name} -d {portArgs} {target.image}"
   logInfo cmd
   logInfo await cmd.asyncExec()
+  logInfo "Trying to incr metric"
   {.gcsafe.}: metrics.containerStarts.labels(target.name).inc()
+  logInfo "Done incing metric"
 
 proc runningContainer*(target: Container): Option[DContainer] =
   let containers = getContainers()
