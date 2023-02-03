@@ -88,9 +88,8 @@ proc main() =
   else:
     asyncCheck mainLoop(disableSetup=disableSetup, useHttps=useHttps)
   # runServerThreaded()
-  # # asyncCheck runServer()
-  # runForever()
-  runServer()
+  runForever()
+  # runServer()
 
 when isMainModule:
   main()
