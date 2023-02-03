@@ -44,4 +44,29 @@ proc eventHandlerSetup*(em: EventManager,
     asyncCheck ncc.ensureDiscardResults()
     asyncCheck nec.ensureDiscardResults()
 
+  proc handleRunCC(e: Event) {.async.} =
+    assertEvent e, evRunCheck
+    logInfo("Running cc ensure")
+    asyncCheck cc.ensureDiscardResults()
+
+  proc handleRunNCC(e: Event) {.async.} =
+    assertEvent e, evRunCheck
+    logInfo("Running ncc ensure")
+    asyncCheck ncc.ensureDiscardResults()
+
+  proc handleRunNEC(e: Event) {.async.} =
+    assertEvent e, evRunCheck
+    logInfo("Running nec ensure")
+    asyncCheck nec.ensureDiscardResults()
+
+  proc handleIncRunCount(e: Event) {.async.} =
+    assertEvent e, evRunCheck
+    logInfo("Incrementing metrics")
+    metrics.incRuns()
+
+  em.registerHandler(evRunCheck, handleIncRunCount)
+  em.registerHandler(evRunCheck, handleRunCC)
+  em.registerHandler(evRunCheck, handleRunNCC)
+  em.registerHandler(evRunCheck, handleRunNEC)
+
   #em.registerHandler(evRunCheck, handleRunCheck)
