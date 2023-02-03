@@ -58,7 +58,7 @@ proc eventHandlerSetup*(em: EventManager,
   proc handleRunNEC(e: Event) {.async.} =
     assertEvent e, evRunCheck
     logInfo("Running nec ensure")
-    await nec.ensureDiscardResults()
+    asyncCheck nec.ensureDiscardResults()
 
   proc handleIncRunCount(e: Event) {.async.} =
     assertEvent e, evRunCheck
