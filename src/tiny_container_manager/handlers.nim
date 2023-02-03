@@ -65,9 +65,9 @@ proc eventHandlerSetup*(em: EventManager,
     logInfo("Incrementing metrics")
     metrics.incRuns()
 
-  em.registerHandler(evRunCheck, handleIncRunCount)
+  # em.registerHandler(evRunCheck, handleIncRunCount)
   # em.registerHandler(evRunCheck, handleRunCC)
   # em.registerHandler(evRunCheck, handleRunNCC)
-  # em.registerHandler(evRunCheck, handleRunNEC)
+  em.registerHandler(evRunCheck, handleRunNEC)
 
   #em.registerHandler(evRunCheck, handleRunCheck)
