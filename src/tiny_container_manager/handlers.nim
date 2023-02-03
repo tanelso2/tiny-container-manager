@@ -1,5 +1,7 @@
 import
   asyncdispatch,
+  macros,
+  sugar,
   os,
   ./cert,
   ./events,
@@ -21,7 +23,6 @@ proc eventHandlerSetup*(em: EventManager,
                         cc: ContainersCollection,
                         ncc: NginxConfigsCollection,
                         nec: NginxEnabledCollection) {.async.} =
-
   proc handleFlush(e: Event) {.async.} =
     assertEvent e, evFlushStdout
     flushFile(stdout)
@@ -35,12 +36,13 @@ proc eventHandlerSetup*(em: EventManager,
 
   em.registerHandler(evCleanLEBackups, handleCleanLEBackups)
 
-  proc handleRunCheck(e: Event) {.async.} =
-    assertEvent e, evRunCheck
-    logInfo("Running all the checks!")
-    metrics.incRuns()
-    asyncCheck cc.ensureDiscardResults()
-    asyncCheck ncc.ensureDiscardResults()
-    asyncCheck nec.ensureDiscardResults()
+  capture cc,ncc,nec:
+    proc handleRunCheck(e: Event) {.async.} =
+      assertEvent e, evRunCheck
+      logInfo("Running all the checks!")
+      metrics.incRuns()
+      asyncCheck cc.ensureDiscardResults()
+      asyncCheck ncc.ensureDiscardResults()
+      asyncCheck nec.ensureDiscardResults()
 
-  em.registerHandler(evRunCheck, handleRunCheck)
+    em.registerHandler(evRunCheck, handleRunCheck)
