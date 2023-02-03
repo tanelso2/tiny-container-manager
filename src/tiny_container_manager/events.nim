@@ -21,12 +21,12 @@ type
             spec*: Container
         of evRunCheck, evTest, evCleanLEBackups, evFlushStdout:
             discard
-    EventHandler* = ((e: Event) {.async,gcsafe.} -> Future[void])
+    EventHandler* = ((e: Event) {.async.} -> Future[void])
     EventManager* = object
         handlers*: TableRef[EventKind, seq[EventHandler]]
 
 proc triggerEvent*(manager: EventManager, e: Event) {.async.} =
-    logDebug fmt"Triggering {e.kind=}"
+    logInfo fmt"Triggering {e.kind=}"
     flushFile(stdout)
     for handler in manager.handlers.getOrDefault(e.kind, @[]):
         asyncCheck handler(e)

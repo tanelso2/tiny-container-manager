@@ -24,26 +24,23 @@ proc eventHandlerSetup*(em: EventManager,
 
   proc handleFlush(e: Event) {.async.} =
     assertEvent e, evFlushStdout
-    logInfo "Handling a flush"
     flushFile(stdout)
 
   em.registerHandler(evFlushStdout, handleFlush)
 
-  proc handleCleanLEBackups(e: Event) {.async, gcsafe.} =
+  proc handleCleanLEBackups(e: Event) {.async.} =
     assertEvent e, evCleanLEBackups
     logInfo("Cleaning up the letsencrypt backups")
-    {.gcsafe.}:
-      cleanUpLetsEncryptBackups()
+    cleanUpLetsEncryptBackups()
 
   em.registerHandler(evCleanLEBackups, handleCleanLEBackups)
 
-  proc handleRunCheck(e: Event) {.async,gcsafe.} =
+  proc handleRunCheck(e: Event) {.async.} =
     assertEvent e, evRunCheck
     logInfo("Running all the checks!")
     metrics.incRuns()
-    {.gcsafe.}:
-      asyncCheck cc.ensureDiscardResults()
-      asyncCheck ncc.ensureDiscardResults()
-      asyncCheck nec.ensureDiscardResults()
+    asyncCheck cc.ensureDiscardResults()
+    asyncCheck ncc.ensureDiscardResults()
+    asyncCheck nec.ensureDiscardResults()
 
   em.registerHandler(evRunCheck, handleRunCheck)

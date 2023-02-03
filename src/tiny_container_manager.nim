@@ -1,26 +1,18 @@
 import
   asyncdispatch,
   asyncfutures,
-  httpclient,
   logging,
-  strformat,
   os,
   strutils,
   segfaults,
   sequtils,
-  sugar,
-  times,
   tiny_container_manager/[
-    cert,
     api_server,
     container_collection,
-    collection,
     config,
-    container,
     events,
     handlers,
     json_utils,
-    metrics,
     nginx/config_collection,
     nginx/enabled_collection,
     shell_utils
@@ -29,8 +21,6 @@ import
   jester
 
 var debugMode = false
-
-const loopSeconds = 15 
 
 proc loopSetup() {.async.} =
   logInfo("Setting up loop")
