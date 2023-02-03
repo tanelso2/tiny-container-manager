@@ -6,26 +6,6 @@ import
   strutils,
   nim_utils/logline
 
-type SyncExec* = object
-
-# TODO In Nim2 use forbids to make sure this isn't called anywhere in the async event loop
-proc syncExec() {.tags: [SyncExec].} = discard
-
-proc runInShell*(x: openArray[string]): string =
-  syncExec()
-  let process = x[0]
-  let args = x[1..^1]
-  let p = startProcess(process, args=args, options={poUsePath})
-  defer: p.close()
-  let exitCode = p.waitForExit()
-  if exitCode != 0:
-    logError("process failed")
-    echo p.errorStream().readAll()
-  return p.outputStream().readAll()
-
-
-proc simpleExec*(command: string): string = command.split.runInShell
-
 proc asyncRunInShell*(x: seq[string]): Future[string] =
   let process = x[0]
   let args = x[1..^1]
@@ -80,10 +60,10 @@ proc setupFirewall*() {.async.} =
   echo await asyncExec("ufw allow https")
   echo await asyncExec("ufw enable")
 
-proc checkNginxService*(): bool =
+proc checkNginxService*(): Future[bool] {.async.} =
   let cmd = "systemctl status nginx.service"
   try:
-    discard cmd.simpleExec()
+    discard await cmd.asyncExec()
     return true
   except:
     return false

@@ -148,12 +148,6 @@ proc parseContainer*(filename: string): Container =
     defer: s.close()
     s.loadNode().ofYaml(Container)
 
-proc lookupDns(host: string): string =
-  fmt"dig {host} +short".simpleExec()
-
-proc lookupDns(target: Container): string =
-  target.host.lookupDns()
-
 proc isConfigFile(filename: string): bool =
   result = filename.endsWith(".yaml") or filename.endsWith(".yml")
 

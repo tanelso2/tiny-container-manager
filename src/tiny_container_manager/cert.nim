@@ -1,4 +1,5 @@
 import
+    asyncdispatch,
     os,
     std/re,
     strutils,
@@ -80,8 +81,8 @@ proc parseCerts*(s: string): seq[Cert] =
   let certs = s.findAll(certbotCertRegex)
   return certs.mapIt(parseCert(it))
 
-proc getAllCertbotCerts*(): seq[Cert] =
-  let output = "certbot certificates".simpleExec()
+proc getAllCertbotCerts*(): Future[seq[Cert]] {.async.} =
+  let output = await "certbot certificates".asyncExec()
   return output.parseCerts()
 
 proc cleanUpLetsEncryptBackups*() =

@@ -53,7 +53,7 @@ proc newConfigsCollection*(cc: ContainersCollection, dir: string, useHttps: bool
     await onNginxChange()
     if useHttps:
       for c in cr.added:
-        if not c.isCertValid:
+        if not await c.isCertValid:
           await c.requestCert()
 
   proc create(i: NginxConfig) {.async.} =
