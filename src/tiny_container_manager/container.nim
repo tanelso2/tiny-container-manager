@@ -76,12 +76,12 @@ proc createContainer*(target: Container) {.async.} =
   await target.tryStopContainer()
   await target.tryRemoveContainer()
   let pullCmd = fmt"docker pull {target.image}"
-  echo pullCmd
-  echo await pullCmd.asyncExec()
+  logInfo pullCmd
+  logInfo await pullCmd.asyncExec()
   let portArgs = fmt"-p {target.containerPort}"
   let cmd = fmt"docker run --name {target.name} -d {portArgs} {target.image}"
-  echo cmd
-  echo await cmd.asyncExec()
+  logInfo cmd
+  logInfo await cmd.asyncExec()
   {.gcsafe.}: metrics.containerStarts.labels(target.name).inc()
 
 proc runningContainer*(target: Container): Option[DContainer] =
