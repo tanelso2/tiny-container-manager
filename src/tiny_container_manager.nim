@@ -93,7 +93,10 @@ proc main() =
     try:
       runForever()
     except:
-      logError fmt"{getCurrentExceptionMsg()}"
+      let
+        e = getCurrentException()
+        msg = getCurrentExceptionMsg()
+      logError fmt"Got exception {repr(e)} with message {msg}"
 
 when isMainModule:
   main()
