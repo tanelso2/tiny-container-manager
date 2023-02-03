@@ -36,13 +36,12 @@ proc eventHandlerSetup*(em: EventManager,
 
   em.registerHandler(evCleanLEBackups, handleCleanLEBackups)
 
-  capture cc,ncc,nec:
-    proc handleRunCheck(e: Event) {.async.} =
-      assertEvent e, evRunCheck
-      logInfo("Running all the checks!")
-      metrics.incRuns()
-      asyncCheck cc.ensureDiscardResults()
-      asyncCheck ncc.ensureDiscardResults()
-      asyncCheck nec.ensureDiscardResults()
+  proc handleRunCheck(e: Event) {.async.} =
+    assertEvent e, evRunCheck
+    logInfo("Running all the checks!")
+    metrics.incRuns()
+    asyncCheck cc.ensureDiscardResults()
+    asyncCheck ncc.ensureDiscardResults()
+    asyncCheck nec.ensureDiscardResults()
 
-    em.registerHandler(evRunCheck, handleRunCheck)
+  #em.registerHandler(evRunCheck, handleRunCheck)
