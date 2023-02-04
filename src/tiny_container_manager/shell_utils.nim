@@ -64,7 +64,8 @@ proc checkNginxService*(): Future[bool] {.async.} =
   let cmd = "systemctl status nginx.service"
   try:
     logInfo "Checking nginx service"
-    discard await cmd.asyncExec()
+    let res =  await cmd.asyncExec()
+    logInfo fmt"{res=}"
     return true
   except:
     return false
