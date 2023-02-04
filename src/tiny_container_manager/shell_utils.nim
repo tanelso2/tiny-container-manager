@@ -9,9 +9,11 @@ import
 proc asyncRunInShell*(x: seq[string]): Future[string] =
   let process = x[0]
   let args = x[1..^1]
+  logInfo fmt"Starting {process=} with {args=}"
   let p = startProcess(process, args=args, options={poUsePath})
   let f = newFuture[string](fromProc="asyncRunInShell")
   proc cb(_: AsyncFD): bool  =
+    logInfo "In the callback for the {process=}"
     defer: p.close()
     let exitCode = p.peekExitCode
     logInfo fmt"Trying to read results of {process=}"
