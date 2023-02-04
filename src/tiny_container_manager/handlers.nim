@@ -77,6 +77,6 @@ proc eventHandlerSetup*(em: EventManager,
   proc handleTest(e: Event) {.async.} =
     assertEvent e, evTest
     logInfo("Handling the test event")
-    await checkNginxService()
+    discard await checkNginxService()
   
   em.registerHandler(evTest, handleTest)
