@@ -63,7 +63,10 @@ proc setupFirewall*() {.async.} =
 proc checkNginxService*(): Future[bool] {.async.} =
   let cmd = "systemctl status nginx.service"
   try:
+    logInfo "Checking nginx service"
     discard await cmd.asyncExec()
     return true
   except:
     return false
+  finally:
+    logInfo "Done checking nginx service"

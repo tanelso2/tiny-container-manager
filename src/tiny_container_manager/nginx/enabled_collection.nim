@@ -58,7 +58,7 @@ proc newEnabledCollection*(ncc: NginxConfigsCollection, enabledDir: string): Ngi
 
   proc onChange(cr: ChangeResult[EnabledLink, NginxEnabledFile]): Future[void] {.async.} =
     logInfo "Inside nec onChange"
-    asyncCheck onNginxChange()
+    await onNginxChange()
 
   NginxEnabledCollection(
     getExpected: () => getExpectedEnabledFiles(ncc, enabledDir),
