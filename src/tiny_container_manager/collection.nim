@@ -2,7 +2,8 @@ import
   sequtils,
   sugar,
   asyncdispatch,
-  ./async_utils
+  ./async_utils,
+  nim_utils/logline
 
 type
   ManagedCollection*[I, E] = ref object of RootObj
@@ -42,11 +43,16 @@ proc createMissing[I,E](this: ManagedCollection[I,E]): Future[seq[I]] {.async.} 
       result.add(e)
 
 proc ensure*[I,E](this: ManagedCollection[I,E]): Future[ChangeResult[I,E]] {.async.} =
+  logInfo "Starting ensure"
   let removed = await this.removeUnexpected()
+  logInfo "removedUnexpected"
   let created = await this.createMissing()
+  logInfo "Created missing"
   result = ChangeResult[I,E](added: created, removed: removed)
   if result.anythingChanged:
+    logInfo "Doing the onChange"
     await this.onChange(result)
+  logInfo "All done with ensure"
 
 proc ensureLoop*[I,E](this: ManagedCollection[I,E], sleepSeconds: int) {.async.} =
   let f = () => this.ensureDiscardResults()
@@ -56,4 +62,6 @@ proc anythingChanged*[I,E](this: ChangeResult[I,E]): bool =
   len(this.added) != 0 or len(this.removed) != 0
 
 proc ensureDiscardResults*[I,E](this: ManagedCollection[I,E]): Future[void] {.async.} =
+  logInfo "Starting ensureDiscardResults"
   discard await this.ensure()
+  logInfo "Finishing ensureDiscardResults"
