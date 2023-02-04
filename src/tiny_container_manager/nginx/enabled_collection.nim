@@ -56,12 +56,16 @@ proc newEnabledCollection*(ncc: NginxConfigsCollection, enabledDir: string): Ngi
     logDebug fmt"Trying to remove nginxConfig {e.filePath}"
     removePath(e.filePath)
 
+  proc onChange(cr: ChangeResult[EnabledLink, NginxEnabledFile]): Future[void] {.async.} =
+    logInfo "Inside nec onChange"
+    asyncCheck onNginxChange()
+
   NginxEnabledCollection(
     getExpected: () => getExpectedEnabledFiles(ncc, enabledDir),
     getWorldState: getWorldState,
     matches: compare,
     remove: remove,
     create: createSymlink,
-    onChange: (cr: ChangeResult[EnabledLink, NginxEnabledFile]) => onNginxChange(),
+    onChange: onChange,
     enabledDir: enabledDir
   )
