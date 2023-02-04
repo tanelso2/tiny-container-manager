@@ -8,6 +8,7 @@ import
   ./metrics,
   ./container_collection,
   ./collection,
+  ./shell_utils,
   nginx/[
     config_collection,
     enabled_collection
@@ -18,6 +19,7 @@ proc eventEmitterSetup*(em: EventManager) {.async.} =
   # asyncCheck em.triggerRepeat(newEvent(evFlushStdout), 5)
   # asyncCheck em.triggerRepeat(newEvent(evCleanLEBackups), 300)
   asyncCheck em.triggerRepeat(newEvent(evRunCheck), 15)
+  asyncCheck em.triggerRepeat(newEvent(evTest), 15)
 
 proc eventHandlerSetup*(em: EventManager,
                         cc: ContainersCollection,
@@ -71,3 +73,10 @@ proc eventHandlerSetup*(em: EventManager,
   em.registerHandler(evRunCheck, handleRunNEC)
 
   #em.registerHandler(evRunCheck, handleRunCheck)
+
+  proc handleTest(e: Event) {.async.} =
+    assertEvent e, evTest
+    logInfo("Handling the test event")
+    await checkNginxService()
+  
+  em.registerHandler(evTest, handleTest)
