@@ -12,6 +12,7 @@ proc asyncRunInShell*(x: seq[string]): Future[string] =
   logInfo fmt"Starting {process=} with {args=}"
   let p = startProcess(process, args=args, options={poUsePath})
   let f = newFuture[string](fromProc="asyncRunInShell")
+  logInfo fmt"started. {p.processID=}"
   proc cb(_: AsyncFD): bool  =
     logInfo "In the callback for the {process=}"
     defer: p.close()
