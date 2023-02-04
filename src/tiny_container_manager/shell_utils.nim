@@ -64,7 +64,8 @@ proc setupFirewall*() {.async.} =
   echo await asyncExec("ufw enable")
 
 proc checkNginxService*(): Future[bool] {.async.} =
-  let cmd = "systemctl status nginx.service"
+  # let cmd = "systemctl status nginx.service"
+  let cmd = "service nginx status"
   try:
     logInfo "Checking nginx service"
     let res =  await cmd.asyncExec()
