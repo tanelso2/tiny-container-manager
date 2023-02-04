@@ -52,6 +52,8 @@ proc ensure*[I,E](this: ManagedCollection[I,E]): Future[ChangeResult[I,E]] {.asy
   if result.anythingChanged:
     logInfo "Doing the onChange"
     await this.onChange(result)
+  else:
+    logInfo "Skipping the onChange"
   logInfo "All done with ensure"
 
 proc ensureLoop*[I,E](this: ManagedCollection[I,E], sleepSeconds: int) {.async.} =
