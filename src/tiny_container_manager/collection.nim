@@ -20,6 +20,7 @@ type
     remove*: ((dc: E) {.async.} -> Future[void])
     create*: ((I) {.async.} -> Future[void])
     onChange*: ((ChangeResult[I,E]) {.async.} -> Future[void])
+    inProgress*: bool
   ChangeResult*[I,E] = ref object of RootObj
     added*: seq[I]
     removed*: seq[E]
@@ -43,6 +44,10 @@ proc createMissing[I,E](this: ManagedCollection[I,E]): Future[seq[I]] {.async.} 
       result.add(e)
 
 proc ensure*[I,E](this: ManagedCollection[I,E]): Future[ChangeResult[I,E]] {.async.} =
+  if this.inProgress:
+    return
+  this.inProgress = true
+  defer: this.inProgress = false
   let removed = await this.removeUnexpected()
   let created = await this.createMissing()
   result = ChangeResult[I,E](added: created, removed: removed)
