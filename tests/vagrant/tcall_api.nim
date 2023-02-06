@@ -24,5 +24,5 @@ template waitForChecks(timeoutSeconds: Natural, body: untyped) =
     finally:
         timeElapsed = cpuTime() - startTime
 
-waitForChecks 300:
+waitForChecks 120:
     checkApi()
