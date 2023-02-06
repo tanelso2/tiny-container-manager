@@ -4,6 +4,7 @@ discard """
 import
   nim_utils/files,
   nim_utils/shell_utils,
+  nim_utils/logline,
   os,
   sugar,
   strformat,
@@ -30,6 +31,7 @@ proc waitForChecks(timeoutSeconds: Natural) =
       assert countDockerContainers() == 1
       assert nginxConfigFile.fileType == ftFile
       assert nginxEnabledFile.fileType == ftSymlink
+      logInfo "Hooray we passed"
       break # We passed everything, break out
     except AssertionDefect:
       sleep(1000)
