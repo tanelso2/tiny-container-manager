@@ -15,7 +15,7 @@ template waitForChecks(timeoutSeconds: Natural, body: untyped) =
   var timeElapsed = cpuTime() - startTime
   while timeElapsed < toFloat(timeoutSeconds):
     try:
-        logInfo fmt"{timeElapsed=}"
+        logInfo("time elapsed = " & $timeElapsed)
         `body`
         logInfo "Hooray we passed"
         break # We passed everything, break out
