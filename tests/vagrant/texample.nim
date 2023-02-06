@@ -21,10 +21,10 @@ let nginxEnabledFile = "/etc/nginx/sites-enabled/example.conf"
 let tcmConfigFile = "/opt/tiny-container-manager/containers/example.yaml"
 
 block Before:
+  assert tcmConfigFile.fileType == ftDoesNotExist
   assert countDockerContainers() == 0, fmt"{countDockerContainers()} != 0"
   assert nginxConfigFile.fileType == ftDoesNotExist
   assert nginxEnabledFile.fileType == ftDoesNotExist
-  assert tcmConfigFile.fileType == ftDoesNotExist
 block WriteFile:
   let fileContents = """
 name: example
