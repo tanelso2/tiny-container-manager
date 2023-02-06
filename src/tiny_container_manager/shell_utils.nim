@@ -62,33 +62,34 @@ proc createFile*(filename: string) =
   open(filename, fmWrite).close()
 
 proc installSnap*() {.async.} =
-  echo await asyncExec("snap install core")
-  echo await asyncExec("snap refresh core")
+  discard await asyncExec("snap install core")
+  discard await asyncExec("snap refresh core")
 
 proc installCertbot*() {.async.} =
   await installSnap()
-  echo await asyncExec("snap install --classic certbot")
+  discard await asyncExec("snap install --classic certbot")
 
 proc installNginx*() {.async.} =
-  echo await asyncExec("apt-get update")
-  echo await asyncExec("apt-get install -y nginx")
+  discard await asyncExec("apt-get update")
+  discard await asyncExec("apt-get install -y nginx")
 
 proc restartNginx*() {.async.} =
   let restartNginxCmd = fmt"systemctl restart nginx"
-  echo restartNginxCmd
-  echo await restartNginxCmd.asyncExec()
+  discard await restartNginxCmd.asyncExec()
 
 proc reloadNginx*() {.async.} =
   let cmd = fmt"systemctl reload nginx"
   discard await cmd.asyncExec()
 
 proc setupFirewall*() {.async.} =
-  echo await asyncExec("ufw default deny incoming")
-  echo await asyncExec("ufw default allow outgoing")
-  echo await asyncExec("ufw allow ssh")
-  echo await asyncExec("ufw allow http")
-  echo await asyncExec("ufw allow https")
-  echo await asyncExec("ufw enable")
+  discard await asyncExec("ufw default deny incoming")
+  discard await asyncExec("ufw default allow outgoing")
+  discard await asyncExec("ufw allow ssh")
+  # Vagrant ssh
+  discard await asyncExec("ufw allow 2222")
+  discard await asyncExec("ufw allow http")
+  discard await asyncExec("ufw allow https")
+  discard await asyncExec("ufw enable")
 
 proc checkNginxService*(): Future[bool] {.async.} =
   # let cmd = "systemctl status nginx.service"
