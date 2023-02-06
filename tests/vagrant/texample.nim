@@ -9,6 +9,7 @@ import
   strformat,
   strutils,
   sequtils,
+  times,
   unittest
 
 proc countDockerContainers(): int =
@@ -20,6 +21,18 @@ let nginxConfigFile = "/etc/nginx/sites-available/example.conf"
 let nginxEnabledFile = "/etc/nginx/sites-enabled/example.conf"
 
 let tcmConfigFile = "/opt/tiny-container-manager/containers/example.yaml"
+
+proc waitForChecks(timeoutSeconds: Natural) =
+  let startTime = cpuTime()
+  while cpuTime() - startTime < toFloat(timeoutSeconds):
+    try:
+      assert tcmConfigFile.fileType == ftFile
+      assert countDockerContainers() == 1
+      assert nginxConfigFile.fileType == ftFile
+      assert nginxEnabledFile.fileType == ftSymlink
+      break # We passed everything, break out
+    except AssertionDefect:
+      sleep(1000)
 
 block Before:
   check tcmConfigFile.fileType == ftDoesNotExist
@@ -34,12 +47,5 @@ containerPort: 80
 host: example.com
   """
   tcmConfigFile.writeFile(fileContents)
-block Waiting:
-  check tcmConfigFile.fileType == ftFile
-  let timeoutSeconds = 60 
-  sleep(timeoutSeconds * 1000)
 block Checking:
-  check tcmConfigFile.fileType == ftFile
-  check countDockerContainers() == 1
-  check nginxConfigFile.fileType == ftFile
-  check nginxEnabledFile.fileType == ftSymlink
+  waitForChecks 300
