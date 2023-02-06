@@ -7,6 +7,14 @@ import
   nim_utils/logline
 
 proc asyncRunInShell*(x: seq[string]): Future[string] =
+  ## This function doesn't work properly
+  ## /home/tnelson/code/tiny-container-manager/tests/tasyncexec.nim(11) tasyncexec
+  ## /home/tnelson/.choosenim/toolchains/nim-1.6.10/lib/pure/asyncdispatch.nim(1961) waitFor
+  ## /home/tnelson/.choosenim/toolchains/nim-1.6.10/lib/pure/asyncdispatch.nim(1653) poll
+  ## /home/tnelson/.choosenim/toolchains/nim-1.6.10/lib/pure/asyncdispatch.nim(1350) runOnce
+  ## /home/tnelson/.choosenim/toolchains/nim-1.6.10/lib/pure/ioselects/ioselectors_epoll.nim(429) selectInto
+  ## /home/tnelson/.choosenim/toolchains/nim-1.6.10/lib/pure/selectors.nim(283) raiseIOSelectorsError
+  ## Error: unhandled exception: Resource temporarily unavailable (code: 11) [IOSelectorsException]
   let process = x[0]
   let args = x[1..^1]
   logInfo fmt"Starting {process=} with {args=}"
@@ -29,7 +37,26 @@ proc asyncRunInShell*(x: seq[string]): Future[string] =
   addProcess(p.processID, cb)
   return f
 
-proc asyncExec*(command: string): Future[string] = command.split.asyncRunInShell
+const procWaitMillis = 50
+
+proc asyncRunAndWait*(x: seq[string]): Future[string] {.async.} =
+  let process = x[0]
+  let args = x[1..^1]
+  let p = startProcess(process, args=args, options={poUsePath})
+  while p.running:
+    await sleepAsync(procWaitMillis)
+  defer: p.close()
+  let exitCode = p.peekExitCode
+  case exitCode
+  of -1:
+    logError "process never started, something's wrong"
+    raise newException(IOError, "Process never started")
+  of 0:
+    return p.outputStream().readAll()
+  else:
+    raise newException(IOError, p.errorStream().readAll())
+
+proc asyncExec*(command: string): Future[string] = command.split.asyncRunAndWait()
 
 proc createFile*(filename: string) =
   open(filename, fmWrite).close()
