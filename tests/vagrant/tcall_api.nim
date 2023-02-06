@@ -1,6 +1,7 @@
 import
     os,
     osproc,
+    strformat,
     times,
     unittest,
     nim_utils/logline
@@ -11,13 +12,17 @@ proc checkApi() =
 
 template waitForChecks(timeoutSeconds: Natural, body: untyped) =
   let startTime = cpuTime()
-  while cpuTime() - startTime < toFloat(timeoutSeconds):
+  var timeElapsed = cpuTime() - startTime
+  while timeElapsed < toFloat(timeoutSeconds):
     try:
+        logInfo fmt"{timeElapsed=}"
         `body`
         logInfo "Hooray we passed"
         break # We passed everything, break out
     except AssertionDefect:
         sleep(1000)
+    finally:
+        timeElapsed = cpuTime() - startTime
 
 waitForChecks 300:
     checkApi()
