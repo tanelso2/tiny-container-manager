@@ -31,8 +31,10 @@ vagrant up
 
 echo "sshing into vm to run tests"
 vagrant ssh -c "sudo bash -c /tcm/tests/vagrant/run_tests_in_vm.sh"
+RET_VAL=$?
 
 if [ $printLogs ]; then
     vagrant ssh -c "sudo journalctl -u tiny-container-manager.service | cat"
 fi
 
+exit $REV_VAL
