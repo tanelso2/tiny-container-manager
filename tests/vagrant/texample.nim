@@ -8,7 +8,8 @@ import
   sugar,
   strformat,
   strutils,
-  sequtils
+  sequtils,
+  unittest
 
 proc countDockerContainers(): int =
   let x = "docker ps".execOutput.strip()
@@ -21,10 +22,10 @@ let nginxEnabledFile = "/etc/nginx/sites-enabled/example.conf"
 let tcmConfigFile = "/opt/tiny-container-manager/containers/example.yaml"
 
 block Before:
-  assert tcmConfigFile.fileType == ftDoesNotExist
-  assert countDockerContainers() == 0, fmt"{countDockerContainers()} != 0"
-  assert nginxConfigFile.fileType == ftDoesNotExist
-  assert nginxEnabledFile.fileType == ftDoesNotExist
+  check tcmConfigFile.fileType == ftDoesNotExist
+  check countDockerContainers() == 0
+  check nginxConfigFile.fileType == ftDoesNotExist
+  check nginxEnabledFile.fileType == ftDoesNotExist
 block WriteFile:
   let fileContents = """
 name: example
@@ -34,11 +35,11 @@ host: example.com
   """
   tcmConfigFile.writeFile(fileContents)
 block Waiting:
-  assert tcmConfigFile.fileType == ftFile
+  check tcmConfigFile.fileType == ftFile
   let timeoutSeconds = 30
   sleep(timeoutSeconds * 1000)
 block Checking:
-  assert tcmConfigFile.fileType == ftFile
-  assert countDockerContainers() == 1, fmt"{countDockerContainers()} != 1"
-  assert nginxConfigFile.fileType == ftFile
-  assert nginxEnabledFile.fileType == ftSymlink
+  check tcmConfigFile.fileType == ftFile
+  check countDockerContainers() == 1
+  check nginxConfigFile.fileType == ftFile
+  check nginxEnabledFile.fileType == ftSymlink
