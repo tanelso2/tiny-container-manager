@@ -24,6 +24,8 @@ mkdir /opt/tiny-container-manager/containers
 mkdir /opt/tiny-container-manager/keys
 
 $TCM_DIR/deployment/install-nim.sh
+. $HOME/.profile
+nimble install -d
 
 apt-get update
 apt-get install -y docker.io \

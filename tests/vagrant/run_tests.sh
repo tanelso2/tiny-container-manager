@@ -24,10 +24,10 @@ vagrant destroy -f
 
 vagrant up
 
-time=30
-echo "Waiting for $time seconds"
-echo "Giving tcm service time to install nim libraries needed by tests"
-sleep $time
+# time=30
+# echo "Waiting for $time seconds"
+# echo "Giving tcm service time to install nim libraries needed by tests"
+# sleep $time
 
 echo "sshing into vm to run tests"
 vagrant ssh -c "sudo bash -c /tcm/tests/vagrant/run_tests_in_vm.sh"
