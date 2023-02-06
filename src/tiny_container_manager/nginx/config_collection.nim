@@ -57,7 +57,7 @@ proc newConfigsCollection*(cc: ContainersCollection, dir: string, useHttps: bool
           await c.requestCert()
 
   proc create(i: NginxConfig) {.async.} =
-    logDebug fmt"Trying to create nginxConfig {i.name}"
+    logInfo fmt"Trying to create nginxConfig {i.name}"
     await i.createInDir(dir, useHttps)
 
   NginxConfigsCollection(
