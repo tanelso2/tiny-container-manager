@@ -18,7 +18,7 @@ import
 proc eventEmitterSetup*(em: EventManager) {.async.} =
   asyncCheck em.triggerRepeat(newEvent(evFlushStdout), 5)
   asyncCheck em.triggerRepeat(newEvent(evCleanLEBackups), 300)
-  asyncCheck em.triggerRepeat(newEvent(evRunCheck), 15)
+  asyncCheck em.triggerRepeat(newEvent(evRunCheck), 5)
   asyncCheck em.triggerRepeat(newEvent(evTest), 15)
 
 proc eventHandlerSetup*(em: EventManager,
