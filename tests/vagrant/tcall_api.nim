@@ -11,9 +11,9 @@ proc checkApi() =
     assert retVal == 0
 
 template waitForChecks(timeoutSeconds: Natural, body: untyped) =
-  let startTime = cpuTime()
-  var timeElapsed = cpuTime() - startTime
-  while timeElapsed < toFloat(timeoutSeconds):
+  let startTime = getTime().toUnix
+  var timeElapsed = getTime().toUnix - startTime
+  while timeElapsed < timeoutSeconds:
     try:
         logInfo("time elapsed = " & $timeElapsed)
         `body`
@@ -22,7 +22,7 @@ template waitForChecks(timeoutSeconds: Natural, body: untyped) =
     except AssertionDefect:
         sleep(1000)
     finally:
-        timeElapsed = cpuTime() - startTime
+        timeElapsed = getTime().toUnix - startTime
 
 waitForChecks 120:
     checkApi()
