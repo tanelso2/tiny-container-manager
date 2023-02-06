@@ -26,6 +26,7 @@ vagrant up
 
 time=30
 echo "Waiting for $time seconds"
+echo "Giving tcm service time to install nim libraries needed by tests"
 sleep $time
 
 echo "sshing into vm to run tests"
