@@ -1,7 +1,9 @@
 import
+  options,
   sequtils,
   sugar,
-  asyncdispatch
+  asyncdispatch,
+  ./async_utils
 
 type
   ManagedCollection*[I, E] = ref object of RootObj
@@ -17,7 +19,8 @@ type
     matches*: (I, E) -> bool
     remove*: ((dc: E) {.async.} -> Future[void])
     create*: ((I) {.async.} -> Future[void])
-    onChange*: ((ChangeResult[I,E]) {.async.} -> Future[void])
+    onChange*: Option[(ChangeResult[I,E]) {.async.} -> Future[void]]
+    inProgress*: bool
   ChangeResult*[I,E] = ref object of RootObj
     added*: seq[I]
     removed*: seq[E]
@@ -41,11 +44,22 @@ proc createMissing[I,E](this: ManagedCollection[I,E]): Future[seq[I]] {.async.} 
       result.add(e)
 
 proc ensure*[I,E](this: ManagedCollection[I,E]): Future[ChangeResult[I,E]] {.async.} =
+  if this.inProgress:
+    return
+  this.inProgress = true
+  defer: this.inProgress = false
   let removed = await this.removeUnexpected()
   let created = await this.createMissing()
   result = ChangeResult[I,E](added: created, removed: removed)
-  if result.anythingChanged:
-    await this.onChange(result)
+  if result.anythingChanged and this.onChange.isSome():
+    await this.onChange.get()(result)
+
+proc ensureLoop*[I,E](this: ManagedCollection[I,E], sleepSeconds: int) {.async.} =
+  let f = () => this.ensureDiscardResults()
+  asyncLoop f, sleepSeconds
 
 proc anythingChanged*[I,E](this: ChangeResult[I,E]): bool =
   len(this.added) != 0 or len(this.removed) != 0
+
+proc ensureDiscardResults*[I,E](this: ManagedCollection[I,E]): Future[void] {.async.} =
+  discard await this.ensure()

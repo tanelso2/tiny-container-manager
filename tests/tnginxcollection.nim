@@ -11,6 +11,7 @@ import
     collection_testing,
     container_testing
   ],
+  nim_utils/logline,
   asyncdispatch,
   std/os,
   std/sequtils,

@@ -4,6 +4,7 @@ import
     ./conffile,
     ../collection,
     asyncdispatch,
+    options,
     os,
     sequtils,
     sugar,
@@ -56,12 +57,16 @@ proc newEnabledCollection*(ncc: NginxConfigsCollection, enabledDir: string): Ngi
     logDebug fmt"Trying to remove nginxConfig {e.filePath}"
     removePath(e.filePath)
 
+  proc onChange(cr: ChangeResult[EnabledLink, NginxEnabledFile]) {.async,closure.} =
+    logInfo "Inside nec onChange"
+    await onNginxChange()
+
   NginxEnabledCollection(
     getExpected: () => getExpectedEnabledFiles(ncc, enabledDir),
     getWorldState: getWorldState,
     matches: compare,
     remove: remove,
     create: createSymlink,
-    onChange: (cr: ChangeResult[EnabledLink, NginxEnabledFile]) => onNginxChange(),
+    onChange: some(onChange),
     enabledDir: enabledDir
   )
