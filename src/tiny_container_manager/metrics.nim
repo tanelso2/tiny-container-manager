@@ -2,6 +2,8 @@ import
   asyncdispatch,
   prometheus as prom
 
+export prom
+
 when isFutureLoggingEnabled:
   import
     prometheus/collectors/asynccollector
