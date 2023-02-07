@@ -37,20 +37,20 @@ proc certMatches(target: NginxConfig, cert: Cert): bool =
   let host = target.host
   return domains.anyIt(it == host)
 
-proc getInstalledCert(target: NginxConfig): Option[Cert] =
-  let certs = getAllCertbotCerts()
+proc getInstalledCert(target: NginxConfig): Future[Option[Cert]] {.async.} =
+  let certs = await getAllCertbotCerts()
   let matches = certs.filterIt(certMatches(target, it))
   if len(matches) < 1:
     return none(Cert)
   else:
     return some(matches[0])
 
-proc isCertValid*(target: NginxConfig): bool =
-  let x = target.getInstalledCert()
+proc isCertValid*(target: NginxConfig): Future[bool] {.async.} =
+  let x = await target.getInstalledCert()
   return x.isSome and x.get().exp.valid
 
-proc cert(x: NginxConfig): Option[Cert] =
-  return getInstalledCert(x)
+proc cert(x: NginxConfig): Future[Option[Cert]] {.async.} =
+  return await getInstalledCert(x)
 
 type
   ActualNginxConfig* = ref object of RootObj
@@ -132,10 +132,11 @@ proc compare*(expected: NginxConfig, actual: ActualNginxConfig, useHttps: bool):
     return false
   var expectedContents: string
   if useHttps:
-    if not expected.isCertValid():
+    let valid = waitFor expected.isCertValid()
+    if not valid:
       # If the cert is not valid, consider this a non-valid deployment
       return false
-    let cert = expected.cert.get()
+    let cert = (waitFor expected.cert).get()
     expectedContents = expected.nginxConfigWithCert(cert)
   else:
     expectedContents = expected.simpleNginxConfig()
@@ -152,9 +153,8 @@ proc requestCert*(target: NginxConfig) {.async.} =
 proc createInDir*(target: NginxConfig, dir: string, useHttps: bool) {.async.} =
   logInfo fmt"Creating {target.name}"
   var contents: string
-  let certValid = target.isCertValid
-  if useHttps and target.isCertValid:
-    let cert = target.cert.get()
+  if useHttps and (await target.isCertValid):
+    let cert = (await target.cert).get()
     contents = target.nginxConfigWithCert(cert)
   else:
     contents = target.simpleNginxConfig()
