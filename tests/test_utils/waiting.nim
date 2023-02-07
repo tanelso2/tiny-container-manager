@@ -10,7 +10,6 @@ template waitForChecks*(timeoutSeconds: Natural, body: untyped) =
         logInfo("time elapsed = " & $timeElapsed)
         `body`
         logInfo "Hooray we passed"
-        success = true
         break # We passed everything, break out
     except AssertionDefect:
         sleep(1000)
