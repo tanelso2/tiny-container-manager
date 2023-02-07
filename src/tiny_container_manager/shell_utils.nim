@@ -85,8 +85,6 @@ proc setupFirewall*() {.async.} =
   discard await asyncExec("ufw default deny incoming")
   discard await asyncExec("ufw default allow outgoing")
   discard await asyncExec("ufw allow ssh")
-  # Vagrant ssh
-  discard await asyncExec("ufw allow 2222")
   discard await asyncExec("ufw allow http")
   discard await asyncExec("ufw allow https")
   discard await asyncExec("ufw enable")

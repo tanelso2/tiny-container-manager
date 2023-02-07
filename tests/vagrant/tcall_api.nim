@@ -6,5 +6,5 @@ import
     ../test_utils/waiting
 
 waitForChecks 120:
-    let retVal = execCmd "curl --fail localhost:6969/metrics"
-    assert retVal == 0
+  let retVal = execCmd "curl --fail localhost:6969/metrics"
+  assert retVal == 0
