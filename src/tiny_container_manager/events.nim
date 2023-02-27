@@ -26,10 +26,11 @@ type
         handlers*: TableRef[EventKind, seq[EventHandler]]
 
 proc triggerEvent*(manager: EventManager, e: Event) {.async.} =
-    logInfo fmt"Triggering {e.kind=}"
+    logDebug fmt"Triggering {e.kind=}"
     flushFile(stdout)
     for handler in manager.handlers.getOrDefault(e.kind, @[]):
-        asyncCheck handler(e)
+        await handler(e)
+    logDebug fmt"Done triggering {e.kind=}"
 
 proc registerHandler*(manager: EventManager, ek: EventKind, handler: EventHandler) =
     var handlers = manager.handlers.getOrDefault(ek, @[])
