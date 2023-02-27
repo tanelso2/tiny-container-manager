@@ -91,8 +91,8 @@ proc main() =
   # runServerThreaded()
   while true:
     try:
-      # runForever()
-      runServer()
+      runForever()
+      # runServer()
     except:
       let
         e = getCurrentException()
