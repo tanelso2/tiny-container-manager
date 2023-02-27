@@ -73,6 +73,10 @@ Vagrant.configure("2") do |config|
     ./deployment/install.sh --skip-gcr
   SHELL
 
+  config.vm.provision "shell", inline: <<-SHELL
+    apt-get install -y valgrind
+  SHELL
+
   # config.vm.provision "shell", name: "install-nim", path: "../../deployment/install-nim.sh"
   # config.vm.provision "shell", name: "install", path: "../../deployment/install.sh"
 end
