@@ -99,5 +99,8 @@ proc main() =
         msg = getCurrentExceptionMsg()
       logError fmt"Got exception {repr(e)} with message {msg}"
 
+when defined(memProfiler):
+  import nimprof
+
 when isMainModule:
   main()
