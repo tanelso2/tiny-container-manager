@@ -7,9 +7,8 @@ template waitForChecks*(timeoutSeconds: Natural, body: untyped) =
   var timeElapsed = getTime().toUnix - startTime
   while timeElapsed < timeoutSeconds:
     try:
-        logInfo("time elapsed = " & $timeElapsed)
+        logDebug("time elapsed = " & $timeElapsed)
         `body`
-        logInfo "Hooray we passed"
         break # We passed everything, break out
     except AssertionDefect:
         sleep(1000)

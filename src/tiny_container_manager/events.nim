@@ -1,6 +1,5 @@
 import 
     asyncdispatch,
-    sequtils,
     strformat,
     sugar,
     tables,
@@ -28,8 +27,10 @@ type
 proc triggerEvent*(manager: EventManager, e: Event) {.async.} =
     logDebug fmt"Triggering {e.kind=}"
     flushFile(stdout)
-    for handler in manager.handlers.getOrDefault(e.kind, @[]):
-        await handler(e)
+    let futs = collect(newSeq):
+        for handler in manager.handlers.getOrDefault(e.kind, @[]):
+            handler(e)
+    await all(futs)
     logDebug fmt"Done triggering {e.kind=}"
 
 proc registerHandler*(manager: EventManager, ek: EventKind, handler: EventHandler) =

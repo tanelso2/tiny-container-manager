@@ -2,8 +2,7 @@ import
   sequtils,
   sugar,
   asyncdispatch,
-  ./async_utils,
-  nim_utils/logline
+  ./async_utils
 
 type
   ManagedCollection*[I, E] = ref object of RootObj

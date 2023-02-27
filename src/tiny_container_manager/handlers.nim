@@ -1,8 +1,5 @@
 import
   asyncdispatch,
-  macros,
-  sugar,
-  os,
   ./cert,
   ./events,
   ./metrics,
@@ -39,28 +36,20 @@ proc eventHandlerSetup*(em: EventManager,
 
   em.registerHandler(evCleanLEBackups, handleCleanLEBackups)
 
-  proc handleRunCheck(e: Event) {.async.} =
-    assertEvent e, evRunCheck
-    logInfo("Running all the checks!")
-    metrics.incRuns()
-    asyncCheck cc.ensureDiscardResults()
-    asyncCheck ncc.ensureDiscardResults()
-    asyncCheck nec.ensureDiscardResults()
-
   proc handleRunCC(e: Event) {.async.} =
     assertEvent e, evRunCheck
     logInfo("Running cc ensure")
-    asyncCheck cc.ensureDiscardResults()
+    await cc.ensureDiscardResults()
 
   proc handleRunNCC(e: Event) {.async.} =
     assertEvent e, evRunCheck
     logInfo("Running ncc ensure")
-    asyncCheck ncc.ensureDiscardResults()
+    await ncc.ensureDiscardResults()
 
   proc handleRunNEC(e: Event) {.async.} =
     assertEvent e, evRunCheck
     logInfo("Running nec ensure")
-    asyncCheck nec.ensureDiscardResults()
+    await nec.ensureDiscardResults()
 
   proc handleIncRunCount(e: Event) {.async.} =
     assertEvent e, evRunCheck
