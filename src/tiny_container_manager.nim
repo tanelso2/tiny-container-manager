@@ -44,9 +44,9 @@ proc mainLoop(disableSetup = false, useHttps = true) {.async.} =
   if not disableSetup:
     await loopSetup()
 
-  # Wait and quit to try and get the profiler to work
-  await sleepAsync(60 * 1000)
-  quit 0
+  # # Wait and quit to try and get the profiler to work
+  # await sleepAsync(60 * 1000)
+  # quit 0
 
 
 
