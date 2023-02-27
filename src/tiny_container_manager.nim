@@ -69,13 +69,13 @@ var p = newParser:
   flag("--disable-https", help="Disable https")
   flag("-d", "--debug", help="Enable debug messaging")
 
-var serverThread: Thread[void]
+# var serverThread: Thread[void]
 
-proc runServerThreaded: void =
-  logInfo "What is going on"
-  let f = proc () {.thread.} = runServer()
-  logInfo "Starting server thread"
-  createThread(serverThread, f)
+# proc runServerThreaded: void =
+#   logInfo "What is going on"
+#   let f = proc () {.thread.} = runServer()
+#   logInfo "Starting server thread"
+#   createThread(serverThread, f)
 
 proc main() =
   var opts = p.parse(commandLineParams())
@@ -94,8 +94,8 @@ proc main() =
   # runServerThreaded()
   while true:
     try:
-      runForever()
-      # runServer()
+      # runForever()
+      runServer()
     except:
       let
         e = getCurrentException()
