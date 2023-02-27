@@ -66,6 +66,6 @@ proc newConfigsCollection*(cc: ContainersCollection, dir: string, useHttps: bool
     matches: (i: NginxConfig, e: ActualNginxConfig) => compare(i,e, useHttps),
     remove: remove,
     create: create,
-    onChange: onChange,
+    onChange: some(onChange),
     dir: dir
   )
