@@ -33,6 +33,11 @@ proc loopSetup() {.async.} =
   await setupFirewall()
 
 proc mainLoop(disableSetup = false, useHttps = true) {.async.} =
+  proc quitEarly() {.async.} =
+    await sleepAsync(15 * 1000)
+    logWarn "HERE'S JOHNNY!"
+    quit 0
+
   let em = newManager()
   let cc = newContainersCollection()
   let ncc = newConfigsCollection(cc, dir = "/etc/nginx/sites-available", useHttps=useHttps)
@@ -40,14 +45,14 @@ proc mainLoop(disableSetup = false, useHttps = true) {.async.} =
 
   await eventEmitterSetup(em)
   await eventHandlerSetup(em,cc,ncc,nec)
+  when defined(memProfiler):
+    # quit early so the profiler will dump 
+    asyncCheck quitEarly()
 
   if not disableSetup:
     await loopSetup()
 
-  # Wait and quit to try and get the profiler to work
-  await sleepAsync(15 * 1000)
-  logWarn "HERE'S JOHNNY!"
-  quit 0
+
 
 
 
