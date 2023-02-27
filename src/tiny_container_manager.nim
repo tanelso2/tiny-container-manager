@@ -34,7 +34,7 @@ proc loopSetup() {.async.} =
 
 proc mainLoop(disableSetup = false, useHttps = true) {.async.} =
   proc quitEarly() {.async.} =
-    await sleepAsync(15 * 1000)
+    await sleepAsync(60 * 1000)
     logWarn "HERE'S JOHNNY!"
     quit 0
 
