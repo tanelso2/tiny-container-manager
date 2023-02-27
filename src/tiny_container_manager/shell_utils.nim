@@ -63,7 +63,7 @@ proc createFile*(filename: string) {.deprecated.} =
   open(filename, fmWrite).close()
 
 proc createFileAsync*(filename: string) {.async.} =
-  openAsync(filename, fmWrite).close()
+  openAsync(filename, fmReadWrite).close()
 
 proc installSnap*() {.async.} =
   discard await asyncExec("snap install core")
