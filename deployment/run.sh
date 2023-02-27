@@ -2,4 +2,5 @@
 
 export PATH=/root/.nimble/bin:$PATH
 nimble choosenim
-nimble run -- -d
+nimble build
+valgrind --leak-check=full ./tiny_container_manager -d >> valgrind-output 2>&1

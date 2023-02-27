@@ -18,6 +18,10 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+if [[ -f "valgrind-output" ]]; then
+  rm valgrind-output
+fi
+
 pushd tests/vagrant
 
 vagrant destroy -f
