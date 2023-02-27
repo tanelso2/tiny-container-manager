@@ -4,6 +4,7 @@ import
   ../container,
   ../shell_utils,
   asyncdispatch,
+  asyncfile,
   options,
   os,
   sequtils,
@@ -159,5 +160,7 @@ proc createInDir*(target: NginxConfig, dir: string, useHttps: bool) {.async.} =
   else:
     contents = target.simpleNginxConfig()
   let filename = dir / target.filename
-  filename.createFile
-  filename.writeFile(contents)
+  await createFileAsync(filename)
+  let f = openAsync(filename, mode = fmWrite)
+  await f.write(contents)
+  f.close()

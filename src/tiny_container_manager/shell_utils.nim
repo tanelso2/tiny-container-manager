@@ -1,5 +1,6 @@
 import
   asyncdispatch,
+  asyncfile,
   osproc,
   streams,
   strformat,
@@ -58,8 +59,11 @@ proc asyncRunAndWait*(x: seq[string]): Future[string] {.async.} =
 
 proc asyncExec*(command: string): Future[string] = command.split.asyncRunAndWait()
 
-proc createFile*(filename: string) =
+proc createFile*(filename: string) {.deprecated.} =
   open(filename, fmWrite).close()
+
+proc createFileAsync*(filename: string) {.async.} =
+  openAsync(filename, fmWrite).close()
 
 proc installSnap*() {.async.} =
   discard await asyncExec("snap install core")
