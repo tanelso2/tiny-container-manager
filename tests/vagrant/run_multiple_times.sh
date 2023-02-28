@@ -4,6 +4,7 @@ results_folder="$PWD/results"
 if [[ -d "$results_folder" ]]; then
   rm -r "$results_folder"
 fi
+mkdir "$results_folder"
 
 for i in {1..10}; do
   echo "Starting test ${i}"
