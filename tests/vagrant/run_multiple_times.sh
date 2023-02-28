@@ -20,5 +20,6 @@ for i in {1..10}; do
   valgrind_file="${results_folder}/test-${i}-valgrind.txt"
   # Copy valgrind output to file
   vagrant ssh -c "cat /tcm/valgrind-output" > "$valgrind_file"
+  popd
 
 done
