@@ -15,5 +15,6 @@ nimble build
 ## Massif
 valgrind \
     --tool=massif \
+    --stacks=yes \
     ./tiny_container_manager -d \
     >> valgrind-output 2>&1
