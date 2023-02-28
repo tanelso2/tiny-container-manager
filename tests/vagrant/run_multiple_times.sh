@@ -11,6 +11,8 @@ for i in {1..10}; do
   nimble vTest
   pushd tests/vagrant
 
+  sleep 90
+
   logs_file="${results_folder}/test-${i}-output.txt"
   # Copy logs to file
   vagrant ssh -c "sudo journalctl -u tiny-container-manager.service | cat" > "$logs_file"
