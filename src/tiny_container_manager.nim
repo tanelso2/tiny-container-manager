@@ -49,7 +49,7 @@ proc mainLoop(disableSetup = false, useHttps = true) {.async.} =
     # quit early so the profiler will dump 
     asyncCheck quitEarly()
 
-  when defined(useMalloc):
+  when defined(quitEarly):
     asyncCheck quitEarly()
 
   if not disableSetup:
