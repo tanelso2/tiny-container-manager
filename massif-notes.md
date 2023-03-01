@@ -22,3 +22,9 @@ ms_print massif.out.20640
 --detailed-freq=<num> for changing frequency of detailed snapshots (default is 10, 1 means every snapshot is detailed)
 
 --max-snapshots=<num> pretty self-explanatory. (Default is 100)
+
+--time-unit=<i|ms|B>
+default: i
+i - instructions executed
+ms - wall clock time
+B - bytes allocated/deallocated

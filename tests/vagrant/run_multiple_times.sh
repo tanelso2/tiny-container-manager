@@ -11,7 +11,7 @@ for i in {1..10}; do
   nimble vTest
   pushd tests/vagrant
 
-  sleep 300
+  sleep 450
 
   logs_file="${results_folder}/test-${i}-output.txt"
   # Copy logs to file
