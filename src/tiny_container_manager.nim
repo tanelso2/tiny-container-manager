@@ -34,7 +34,9 @@ proc loopSetup() {.async.} =
 
 proc mainLoop(disableSetup = false, useHttps = true) {.async.} =
   proc quitEarly() {.async.} =
-    await sleepAsync(5 * 60 * 1000)
+    let waitTimeSec = 5 * 60
+    logWarn fmt"Will be quitting in {waitTimeSec} seconds"
+    await sleepAsync(waitTimeSec * 1000)
     logWarn "HERE'S JOHNNY!"
     quit 0
 
