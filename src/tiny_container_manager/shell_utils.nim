@@ -92,6 +92,8 @@ proc setupFirewall*() {.async.} =
   discard await asyncExec("ufw allow ssh")
   discard await asyncExec("ufw allow http")
   discard await asyncExec("ufw allow https")
+  if config.bindAll:
+    discard await asyncExec(fmt"ufw allow {config.tcmApiPort}")
   discard await asyncExec("ufw enable")
 
 proc checkNginxService*(): Future[bool] {.async.} =

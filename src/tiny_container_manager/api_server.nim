@@ -73,7 +73,6 @@ proc runServer* =
   let portNum = 6969
   let port = Port(portNum)
   let bindAddr = if config.bindAll: "0.0.0.0" else: "127.0.0.1"
-  logInfo fmt"{bindAddr=}"
   let settings = newSettings(port=port, bindAddr=bindAddr)
   var jester = initJester(application, settings=settings)
   jester.serve()
