@@ -6,6 +6,7 @@ import
   strformat,
   strutils,
   nim_utils/logline,
+  ./config,
   ./metrics
 
 proc asyncRunInShell*(x: seq[string]): Future[string] =
