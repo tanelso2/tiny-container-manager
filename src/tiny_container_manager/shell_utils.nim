@@ -5,7 +5,8 @@ import
   streams,
   strformat,
   strutils,
-  nim_utils/logline
+  nim_utils/logline,
+  ./metrics
 
 proc asyncRunInShell*(x: seq[string]): Future[string] =
   ## This function doesn't work properly
@@ -98,9 +99,11 @@ proc checkNginxService*(): Future[bool] {.async.} =
   let cmd = "service nginx status"
   try:
     logInfo "Checking nginx service"
+    metrics.nginxCheckStarts.inc()
     let res =  await cmd.asyncExec()
     return true
   except:
     return false
   finally:
+    metrics.nginxCheckFinishes.inc()
     logInfo "Done checking nginx service"
