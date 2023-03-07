@@ -32,15 +32,16 @@ apt-get install -y docker.io \
                    libssl-dev
 
 if [[ $skipGcr != "true" ]]; then
-    DOCKER_CREDS_GCR_RELEASE="https://github.com/GoogleCloudPlatform/docker-credential-gcr/releases/download/v2.1.5/docker-credential-gcr_linux_amd64-2.1.5.tar.gz"
-    T=$(mktemp -d)
-    cd $T
-    wget $DOCKER_CREDS_GCR_RELEASE
-    tar -zxf docker-credential*.tar.gz
-    cp docker-credential-gcr "/usr/local/bin"
-
-    docker-credential-gcr configure-docker
-    docker-credential-gcr gcr-login
+    export CLOUDSDK_CORE_DISABLE_PROMPTS=1
+    curl "https://sdk.cloud.google.com" | bash > /dev/null
+    
+    SERVICE_ACCOUNT_FILE="/root/service-account.json"
+    if [[ -z "$SERVICE_ACCOUNT_FILE" ]]; then
+        echo "ERROR! Cannot find $SERVICE_ACCOUNT_FILE. Make sure it exists or run with --skip-gcr"
+    else
+        gcloud auth activate-service-account --key-file="${SERVICE_ACCOUNT_FILE}"
+        gcloud auth configure-docker --quiet
+    fi
 else
     echo "Skipping installing docker-credential-gcr"
 fi
