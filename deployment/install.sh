@@ -18,7 +18,14 @@ if [[ $TCM_DIR != $SRC_DIR ]]; then
     ln -s $SRC_DIR $TCM_DIR
 fi
 
+echo "Creating directories for tcm"
+mkdir /opt/tiny-container-manager
+mkdir /opt/tiny-container-manager/containers
+mkdir /opt/tiny-container-manager/keys
+
 $TCM_DIR/deployment/install-nim.sh
+. $HOME/.profile
+nimble install -d
 
 apt-get update
 apt-get install -y docker.io \

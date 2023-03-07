@@ -76,13 +76,15 @@ proc createContainer*(target: Container) {.async.} =
   await target.tryStopContainer()
   await target.tryRemoveContainer()
   let pullCmd = fmt"docker pull {target.image}"
-  echo pullCmd
-  echo await pullCmd.asyncExec()
+  logInfo pullCmd
+  logInfo await pullCmd.asyncExec()
   let portArgs = fmt"-p {target.containerPort}"
   let cmd = fmt"docker run --name {target.name} -d {portArgs} {target.image}"
-  echo cmd
-  echo await cmd.asyncExec()
+  logInfo cmd
+  logInfo await cmd.asyncExec()
+  logInfo "Trying to incr metric"
   {.gcsafe.}: metrics.containerStarts.labels(target.name).inc()
+  logInfo "Done incing metric"
 
 proc runningContainer*(target: Container): Option[DContainer] =
   let containers = getContainers()
@@ -148,12 +150,6 @@ proc parseContainer*(filename: string): Container =
     defer: s.close()
     s.loadNode().ofYaml(Container)
 
-proc lookupDns(host: string): string =
-  fmt"dig {host} +short".simpleExec()
-
-proc lookupDns(target: Container): string =
-  target.host.lookupDns()
-
 proc isConfigFile(filename: string): bool =
   result = filename.endsWith(".yaml") or filename.endsWith(".yml")
 
@@ -161,7 +157,6 @@ proc getContainerConfigs*(directory: string = config.containerDir): seq[Containe
   discard directory.existsOrCreateDir
   var containers: seq[Container] = newSeq[Container]()
   for path in walkFiles(fmt"{directory}/*"):
-    logInfo(fmt"walking down {path}")
     if path.isConfigFile():
       containers.add(path.parseContainer())
   return containers

@@ -1,23 +1,19 @@
 import
   asyncdispatch,
-  httpclient,
+  asyncfutures,
   logging,
-  strformat,
   os,
-  prometheus as prom,
   strutils,
   segfaults,
   sequtils,
-  sugar,
-  times,
+  strformat,
   tiny_container_manager/[
     api_server,
     container_collection,
-    collection,
     config,
-    container,
+    events,
+    handlers,
     json_utils,
-    metrics,
     nginx/config_collection,
     nginx/enabled_collection,
     shell_utils
@@ -26,39 +22,6 @@ import
   jester
 
 var debugMode = false
-
-let client = newHttpClient(maxRedirects=0)
-
-proc runCertbotForAll(containers: seq[Container]) =
-  var domainFlags = ""
-  let domains = containers.map(proc(c: Container): string = c.host)
-  let domainsWithFlags = domains.map((x) => fmt"-d {x}")
-  let d = domainsWithFlags.join(" ")
-  let certbotCmd = fmt"certbot run --nginx -n --keep {d} --email {config.email} --agree-tos"
-  echo certbotCmd
-  echo certbotCmd.simpleExec()
-
-proc checkDiskUsage() =
-  let x = "df -i".simpleExec()
-  let y: string = x.split("\n").filter(z => z.contains("/dev/vda1"))[0]
-
-proc cleanUpLetsEncryptBackups() =
-  let dir = "/var/lib/letsencrypt/backups"
-  let anHourAgo = getTime() + initTimeInterval(hours = -1)
-  var filesDeleted = 0
-  for (fileType, path) in walkDir(dir):
-    # a < b if a happened before b
-    if path.getCreationTime() < anHourAgo:
-      if fileType == pcFile:
-        path.removeFile()
-      if fileType == pcDir:
-        path.removeDir()
-      filesDeleted += 1
-
-  logDebug(fmt"Deleted {filesDeleted} backup files")
-  metrics.letsEncryptBackupsDeleted.inc(filesDeleted)
-
-const loopSeconds = 30
 
 proc loopSetup() {.async.} =
   logInfo("Setting up loop")
@@ -70,42 +33,31 @@ proc loopSetup() {.async.} =
   await setupFirewall()
 
 proc mainLoop(disableSetup = false, useHttps = true) {.async.} =
-  if not disableSetup:
-    await loopSetup()
+  proc quitEarly() {.async.} =
+    let waitTimeSec = 5 * 60
+    logWarn fmt"Will be quitting in {waitTimeSec} seconds"
+    await sleepAsync(waitTimeSec * 1000)
+    logWarn "HERE'S JOHNNY!"
+    quit 0
+
+  let em = newManager()
   let cc = newContainersCollection()
   let ncc = newConfigsCollection(cc, dir = "/etc/nginx/sites-available", useHttps=useHttps)
   let nec = newEnabledCollection(ncc, enabledDir = "/etc/nginx/sites-enabled")
-  logInfo("Starting loop")
-  var i = 0
-  while true:
-    metrics.incRuns()
-    {.gcsafe.}: metrics.iters.set(i)
 
-    try:
-      # TODO: These don't need to run sequentially...
-      logInfo "Running containersCollection"
-      discard await cc.ensure()
-      logInfo "Running nginx configs collection"
-      discard await ncc.ensure()
-      logInfo "Running nginx enabled symlinks collection"
-      discard await  nec.ensure()
-    except:
-      let
-        e = getCurrentException()
-        msg = getCurrentExceptionMsg()
-      logError fmt"Got exception {repr(e)} with message {msg}"
+  await eventEmitterSetup(em)
+  await eventHandlerSetup(em,cc,ncc,nec)
+  when defined(memProfiler):
+    # quit early so the profiler will dump 
+    asyncCheck quitEarly()
 
-    logInfo("Cleaning up the letsencrypt backups")
-    cleanUpLetsEncryptBackups()
+  when defined(quitEarly):
+    asyncCheck quitEarly()
 
-    if not checkNginxService():
-      await restartNginx()
+  if not disableSetup:
+    await loopSetup()
 
-    logInfo("Going to sleep")
-    # Make sure log messages are displayed promptly
-    flushFile(stdout)
-    i+=1
-    await sleepAsync(loopSeconds * 1000)
+
 
 
 
@@ -128,19 +80,19 @@ var p = newParser:
   flag("--disable-https", help="Disable https")
   flag("-d", "--debug", help="Enable debug messaging")
 
-var serverThread: Thread[void]
+# var serverThread: Thread[void]
 
-proc runServerThreaded: void =
-  logInfo "What is going on"
-  let f = proc () {.thread.} = runServer()
-  logInfo "Starting server thread"
-  createThread(serverThread, f)
+# proc runServerThreaded: void =
+#   logInfo "What is going on"
+#   let f = proc () {.thread.} = runServer()
+#   logInfo "Starting server thread"
+#   createThread(serverThread, f)
 
 proc main() =
   var opts = p.parse(commandLineParams())
 
   let disableSetup = opts.disable_setup
-  let useHttps = not opts.disable_https
+  let useHttps = not opts.disable_https and defaultConfig.httpsEnabled
   if opts.debug:
     debugMode = true
     setLogFilter(lvlDebug)
@@ -148,17 +100,21 @@ proc main() =
     setLogFilter(lvlInfo)
   if opts.no_management:
     logInfo "No management mode enabled, not starting the mainLoop"
-    runServer()
   else:
     asyncCheck mainLoop(disableSetup=disableSetup, useHttps=useHttps)
-  runServerThreaded()
-  # # asyncCheck runServer()
+  # runServerThreaded()
+  while true:
+    try:
+      # runForever()
+      runServer()
+    except:
+      let
+        e = getCurrentException()
+        msg = getCurrentExceptionMsg()
+      logError fmt"Got exception {repr(e)} with message {msg}"
 
-  runForever()
-  # runServer()
-
+when defined(memProfiler):
+  import nimprof
 
 when isMainModule:
   main()
-  # metrics.uptimeMetric.labels("blahblah.com").inc()
-  # echo metrics.getOutput()

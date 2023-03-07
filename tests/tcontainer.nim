@@ -13,7 +13,8 @@ import
   ]
 
 import
-  test_utils/container_testing
+  test_utils/container_testing,
+  std/tempfiles
 
 if dockerRunning():
   block CreatingAContainer:
@@ -27,7 +28,8 @@ if dockerRunning():
     waitFor testC.createContainer()
 
 block ReadingFromFile:
-  let t = "mktemp".simpleExec()
+  let (fd,t) = createTempFile("", "")
+  fd.close()
   let name = "example"
   let image = "alpine:latest"
   let containerPort = 6969

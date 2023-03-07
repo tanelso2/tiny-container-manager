@@ -2,6 +2,8 @@ import
   asyncdispatch,
   prometheus as prom
 
+export prom
+
 when isFutureLoggingEnabled:
   import
     prometheus/collectors/asynccollector
@@ -53,6 +55,30 @@ var nginxConfigsWritten* {.global.} = prom.newCounter(
 
 var letsEncryptBackupsDeleted* {.global.} = prom.newCounter(
   "tcm_letsencrypt_backups_deleted",
+  "",
+  @[]
+)
+
+var nginxCheckStarts* {.global.} = prom.newCounter(
+  "tcm_nginx_check_starts",
+  "",
+  @[]
+)
+
+var nginxCheckFinishes* {.global.} = prom.newCounter(
+  "tcm_nginx_check_finishes",
+  "",
+  @[]
+)
+
+var tcmOpenFiles* {.global.} = prom.newGauge(
+  "tcm_open_files",
+  "Number of open files held by tcm",
+  @[]
+)
+
+var tcmMemSize* {.global.} = prom.newGauge(
+  "tcm_mem_size_kb",
   "",
   @[]
 )
