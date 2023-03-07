@@ -7,7 +7,7 @@ const containerDir* = configDir / "containers"
 const keysDir* = configDir / "keys"
 const tcmHost* = "tcm.thomasnelson.me"
 const tcmApiPort* = 6969
-const bindAll* = true
+const bindAll* = false
 
 type
   TCMConfig* = object
