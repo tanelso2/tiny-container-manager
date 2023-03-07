@@ -50,6 +50,7 @@ const httpNewline = "\c\n"
 proc emptyHeaders(): Headers = initTable[string,string]()
 
 proc makeRequest(s: Socket, headers = emptyHeaders(), body: JsonNode = nil, httpMethod = "GET", path = "/", timeout = 10_000): JsonNode =
+  defer: s.close()
   let introString = &"{httpMethod} {path} HTTP/1.1\c\n"
   s.send(introString)
   let headerString = headers.makeHeaderString()
