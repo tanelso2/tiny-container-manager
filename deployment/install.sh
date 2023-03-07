@@ -34,6 +34,8 @@ apt-get install -y docker.io \
 if [[ $skipGcr != "true" ]]; then
     export CLOUDSDK_CORE_DISABLE_PROMPTS=1
     curl "https://sdk.cloud.google.com" | bash > /dev/null
+    echo ". $HOME/google-cloud-sdk/path.bash.inc" >> "$HOME/.profile"
+    . $HOME/.profile
     
     SERVICE_ACCOUNT_FILE="/root/service-account.json"
     if [[ -z "$SERVICE_ACCOUNT_FILE" ]]; then
