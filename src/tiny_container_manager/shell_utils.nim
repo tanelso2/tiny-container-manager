@@ -99,7 +99,7 @@ proc setupFirewall*() {.async.} =
 
 proc checkNginxService*(): Future[bool] {.async.} =
   # let cmd = "systemctl status nginx.service"
-  let cmd = "service nginx status"
+  let cmd = "systemctl status --no-pager nginx.service"
   try:
     logInfo "Checking nginx service"
     metrics.nginxCheckStarts.inc()

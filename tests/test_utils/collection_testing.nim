@@ -9,12 +9,13 @@ import
     nginx/enabled_collection
   ],
   asyncdispatch,
+  options,
   sugar
 
 proc disableOnChange*[I,E](this: ManagedCollection[I,E]) =
-  proc onChange(cr: ChangeResult[I,E]) {.async.} =
+  proc onChange(cr: ChangeResult[I,E]) {.async,closure.} =
     discard
-  this.onChange = onChange
+  this.onChange = some(onChange)
 
 # This doesn't work because it doesn't know how to make a Future of a generic type
 #
