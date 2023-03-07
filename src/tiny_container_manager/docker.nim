@@ -49,7 +49,9 @@ const httpNewline = "\c\n"
 
 proc emptyHeaders(): Headers = initTable[string,string]()
 
-proc makeRequest(s: Socket, headers = emptyHeaders(), body: JsonNode = nil, httpMethod = "GET", path = "/", timeout = 10_000): JsonNode =
+proc makeRequest(headers = emptyHeaders(), body: JsonNode = nil, httpMethod = "GET", path = "/", timeout = 10_000): JsonNode =
+  let s = getDockerSocket()
+  defer: s.close()
   let introString = &"{httpMethod} {path} HTTP/1.1\c\n"
   s.send(introString)
   let headerString = headers.makeHeaderString()
@@ -88,22 +90,18 @@ proc makeRequest(s: Socket, headers = emptyHeaders(), body: JsonNode = nil, http
   return parseJson(body)
 
 proc getContainers*(): seq[DContainer] =
-  let sock = getDockerSocket()
-  defer: sock.close()
-  let resJson = makeRequest(sock, path = "/containers/json")
+  let resJson = makeRequest(path = "/containers/json")
   return to(resJson, seq[DContainer])
 
 proc getContainer*(name: string): DContainer =
-  let sock = getDockerSocket()
-  defer: sock.close()
-  let resJson = makeRequest(sock, path = &"/containers/{name}/json")
+  let resJson = makeRequest(path = &"/containers/{name}/json")
   return to(resJson, DContainer)
 
 proc main() =
   let socket = getDockerSocket()
   defer: socket.close()
-  let resp = socket.makeRequest(path = "/containers/json")
-  discard socket.makeRequest(path = "/")
+  let resp = makeRequest(path = "/containers/json")
+  discard makeRequest(path = "/")
 
 when isMainModule:
   echo getContainers()
