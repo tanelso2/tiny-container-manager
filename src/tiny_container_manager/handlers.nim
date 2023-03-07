@@ -5,6 +5,7 @@ import
   ./metrics,
   ./container_collection,
   ./collection,
+  ./procinfo,
   ./shell_utils,
   nginx/[
     config_collection,
@@ -13,6 +14,7 @@ import
   nim_utils/logline
 
 proc eventEmitterSetup*(em: EventManager) {.async.} =
+  asyncCheck em.triggerRepeat(newEvent(evUpdateProcMetrics), 15)
   asyncCheck em.triggerRepeat(newEvent(evFlushStdout), 5)
   asyncCheck em.triggerRepeat(newEvent(evCleanLEBackups), 300)
   asyncCheck em.triggerRepeat(newEvent(evRunCheck), 5)
@@ -69,3 +71,10 @@ proc eventHandlerSetup*(em: EventManager,
     discard await checkNginxService()
   
   em.registerHandler(evTest, handleTest)
+
+  proc handleMetricsUpdate(e: Event) {.async.} =
+    assertEvent e, evUpdateProcMetrics
+    logInfo "Updating metrics"
+    updateProcInfoMetrics()
+
+  em.registerHandler(evUpdateProcMetrics, handleMetricsUpdate)

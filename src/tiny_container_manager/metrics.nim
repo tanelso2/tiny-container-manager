@@ -71,6 +71,18 @@ var nginxCheckFinishes* {.global.} = prom.newCounter(
   @[]
 )
 
+var tcmOpenFiles* {.global.} = prom.newGauge(
+  "tcm_open_files",
+  "Number of open files held by tcm",
+  @[]
+)
+
+var tcmMemSize* {.global.} = prom.newGauge(
+  "tcm_mem_size_kb",
+  "",
+  @[]
+)
+
 proc getOutput*(): string =
   #
   # No idea if actually gcsafe, just want compiler to shut up

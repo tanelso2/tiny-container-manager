@@ -1,5 +1,6 @@
 nimcache/
 nimblecache/
+nimbledeps/
 htmldocs/
 tiny_container_manager
 !tiny_container_manager/
