@@ -1,33 +1,16 @@
 import
-  asyncdispatch,
   prometheus as prom
 
 export prom
-
-when isFutureLoggingEnabled:
-  import
-    prometheus/collectors/asynccollector
-  let asyncCollector = newAsyncCollector()
 
 var runs = prom.newCounter(
   "tcm_runs",
   ""
 )
 
-var iters* = prom.newGauge(
-  "tcm_iterations",
-  ""
-)
-
 proc incRuns*() =
   {.gcsafe.}:
     runs.inc()
-
-var uptimeMetric* = prom.newCounter(
-  "tcm_uptime",
-  "",
-  @["site"]
-)
 
 var healthCheckStatus* = prom.newCounter(
   "tcm_healthcheck",
