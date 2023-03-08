@@ -1,5 +1,6 @@
 #!/bin/bash -x
 
+source $HOME/.profile
 export PATH=/root/.nimble/bin:$PATH
 nimble choosenim
 nimble build

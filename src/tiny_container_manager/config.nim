@@ -26,5 +26,5 @@ const defaultConfig*: TCMConfig = TCMConfig(
   keysDir: configDir / "keys",
   tcmHost: "tcm.thomasnelson.me",
   tcmApiPort: 6969,
-  httpsEnabled: false
+  httpsEnabled: true
 )
