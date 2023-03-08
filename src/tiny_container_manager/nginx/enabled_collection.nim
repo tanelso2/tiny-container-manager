@@ -58,7 +58,6 @@ proc newEnabledCollection*(ncc: NginxConfigsCollection, enabledDir: string): Ngi
     removePath(e.filePath)
 
   proc onChange(cr: ChangeResult[EnabledLink, NginxEnabledFile]) {.async,closure.} =
-    logInfo "Inside nec onChange"
     await onNginxChange()
 
   NginxEnabledCollection(

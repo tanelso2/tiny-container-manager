@@ -152,7 +152,7 @@ proc requestCert*(target: NginxConfig) {.async.} =
   echo await certbotCmd.asyncExec()
 
 proc createInDir*(target: NginxConfig, dir: string, useHttps: bool) {.async.} =
-  logInfo fmt"Creating {target.name}"
+  logInfo fmt"Creating nginx config for {target.name}"
   var contents: string
   if useHttps and (await target.isCertValid):
     let cert = (await target.cert).get()

@@ -101,7 +101,6 @@ proc checkNginxService*(): Future[bool] {.async.} =
   # let cmd = "systemctl status nginx.service"
   let cmd = "systemctl status --no-pager nginx.service"
   try:
-    logInfo "Checking nginx service"
     metrics.nginxCheckStarts.inc()
     let res =  await cmd.asyncExec()
     return true
@@ -109,4 +108,3 @@ proc checkNginxService*(): Future[bool] {.async.} =
     return false
   finally:
     metrics.nginxCheckFinishes.inc()
-    logInfo "Done checking nginx service"

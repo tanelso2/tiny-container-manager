@@ -36,7 +36,6 @@ router application:
   post "/container":
     swallowErrors:
       authRequired:
-        logInfo fmt"Got a POST"
         let spec = request.jsonBody(Container)
         try:
           spec.add()
@@ -69,10 +68,12 @@ router application:
         respOk
 
 proc runServer* =
-  logInfo "Starting server"
   let portNum = 6969
   let port = Port(portNum)
   let bindAddr = if config.bindAll: "0.0.0.0" else: "127.0.0.1"
+  if config.bindAll:
+    logWarn fmt"Binding to all addresses at {bindAddr}"
+  logInfo fmt"Starting server at {bindAddr}"
   let settings = newSettings(port=port, bindAddr=bindAddr)
   var jester = initJester(application, settings=settings)
   jester.serve()

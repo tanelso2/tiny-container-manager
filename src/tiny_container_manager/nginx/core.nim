@@ -9,11 +9,11 @@ const nginxAvailableDir* = "/etc/nginx/sites-available"
 const nginxEnabledDir* = "/etc/nginx/sites-enabled"
 
 proc onNginxChange*() {.async.} =
-  logInfo "Checking nginx status"
+  logDebug "Checking nginx status"
   let serviceStatus = await checkNginxService()
   if serviceStatus:
-    logInfo "Reloading nginx"
+    logDebug "Reloading nginx"
     await reloadNginx()
   else:
-    logInfo "Restarting nginx"
+    logDebug "Restarting nginx"
     await restartNginx()

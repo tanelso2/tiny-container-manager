@@ -55,22 +55,13 @@ proc eventHandlerSetup*(em: EventManager,
 
   proc handleIncRunCount(e: Event) {.async.} =
     assertEvent e, evRunCheck
-    logInfo("Incrementing metrics")
+    logInfo("Incrementing run count")
     metrics.incRuns()
 
   em.registerHandler(evRunCheck, handleIncRunCount)
   em.registerHandler(evRunCheck, handleRunCC)
   em.registerHandler(evRunCheck, handleRunNCC)
   em.registerHandler(evRunCheck, handleRunNEC)
-
-  #em.registerHandler(evRunCheck, handleRunCheck)
-
-  proc handleTest(e: Event) {.async.} =
-    assertEvent e, evTest
-    logInfo("Handling the test event")
-    discard await checkNginxService()
-  
-  em.registerHandler(evTest, handleTest)
 
   proc handleMetricsUpdate(e: Event) {.async.} =
     assertEvent e, evUpdateProcMetrics
