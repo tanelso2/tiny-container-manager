@@ -8,7 +8,9 @@ proc apiConfig*(): NginxConfig =
                              port: config.tcmApiPort,
                              container: Container())
   NginxConfig(
-    name: "tcm_api",
+    # The 00- ensures that this will be loaded by default 
+    # when there is not a complete match on the site name
+    name: "00-tcm_api",
     allHosts: @[config.tcmHost],
     containers: @[rootCon]
   )
