@@ -1,5 +1,4 @@
 import
-    ./api,
     ./conffile,
     ./core,
     ../collection,
@@ -20,7 +19,7 @@ type
     dir*: string
     useHttps: bool
 
-proc getExpectedNginxConfigs(containers: seq[Container]): seq[NginxConfig] =
+proc getNginxConfigsForContainers(containers: seq[Container]): seq[NginxConfig] =
   result = collect(newSeq):
     for c in containers:
       let rc = c.runningContainer
@@ -33,7 +32,7 @@ proc getExpectedNginxConfigs(containers: seq[Container]): seq[NginxConfig] =
 
 proc getExpectedNginxConfigs(cc: ContainersCollection): Future[seq[NginxConfig]] {.async.} =
   let cons = await cc.getExpected()
-  return getExpectedNginxConfigs(cons)
+  return getNginxConfigsForContainers(cons)
 
 proc getActualNginxConfigs(dir: string = nginxAvailableDir): seq[ActualNginxConfig] =
   return collectFilesInDir(dir).mapIt(ActualNginxConfig(path: it))

@@ -24,6 +24,18 @@ type
     allHosts*: seq[string]
     containers*: seq[ContainerRef]
 
+proc apiConfig*(): NginxConfig =
+  let rootCon = ContainerRef(path: "/",
+                             port: config.tcmApiPort,
+                             container: Container())
+  NginxConfig(
+    # The 00- ensures that this will be loaded by default 
+    # when there is not a complete match on the site name
+    name: "00-tcm_api",
+    allHosts: @[config.tcmHost],
+    containers: @[rootCon]
+  )
+
 proc filename*(target: NginxConfig): string =
   fmt"{target.name}.conf"
 
