@@ -18,7 +18,7 @@ requires "jester"
 requires "argparse"
 requires "prometheus"
 requires "https://github.com/tanelso2/nim_utils >= 0.2.0"
-requires "https://github.com/tanelso2/yanyl >= 0.0.1"
+requires "https://github.com/tanelso2/yanyl >= 0.0.4"
 
 task test, "Runs the test suite":
   exec "nimble build -y && testament p 'tests/*.nim'"
