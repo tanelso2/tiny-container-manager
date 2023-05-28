@@ -26,6 +26,8 @@ pushd tests/vagrant
 
 vagrant destroy -f
 
+set -e
+
 vagrant up
 
 echo "sshing into vm to run tests"
