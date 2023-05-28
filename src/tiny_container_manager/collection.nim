@@ -20,7 +20,7 @@ type
     remove*: ((dc: E) {.async.} -> Future[void])
     create*: ((I) {.async.} -> Future[void])
     onChange*: Option[(ChangeResult[I,E]) {.async.} -> Future[void]]
-    inProgress*: bool
+    inProgressFut: Option[Future[ChangeResult[I,E]]]
   ChangeResult*[I,E] = ref object of RootObj
     added*: seq[I]
     removed*: seq[E]
@@ -43,16 +43,25 @@ proc createMissing[I,E](this: ManagedCollection[I,E]): Future[seq[I]] {.async.} 
       await this.create(e)
       result.add(e)
 
-proc ensure*[I,E](this: ManagedCollection[I,E]): Future[ChangeResult[I,E]] {.async.} =
-  if this.inProgress:
-    return
-  this.inProgress = true
-  defer: this.inProgress = false
+proc ensureHelper[I,E](this: ManagedCollection[I,E]): Future[ChangeResult[I,E]] {.async.} =
+  ## The actual logic behind ensure(). 
   let removed = await this.removeUnexpected()
   let created = await this.createMissing()
   result = ChangeResult[I,E](added: created, removed: removed)
   if result.anythingChanged and this.onChange.isSome():
     await this.onChange.get()(result)
+
+proc ensure*[I,E](this: ManagedCollection[I,E]): Future[ChangeResult[I,E]] =
+  ## This function wraps ensureHelper() in order to make sure
+  ## only one instance of ensure is running
+  if this.inProgressFut.isSome():
+    return this.inProgressFut.get()
+  let fut = this.ensureHelper()
+  this.inProgressFut = some(fut)
+  discard waitFor fut
+  this.inProgressFut = none(Future[ChangeResult[I,E]])
+  return fut
+
 
 proc ensureLoop*[I,E](this: ManagedCollection[I,E], sleepSeconds: int) {.async.} =
   let f = () => this.ensureDiscardResults()
