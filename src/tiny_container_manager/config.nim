@@ -6,7 +6,7 @@ const configDir* = "/opt/tiny-container-manager"
 const containerDir* = configDir / "containers"
 const keysDir* = configDir / "keys"
 const tcmHost* = "tcm.thomasnelson.me"
-const tcmApiPort* = 6969
+const tcmApiPort* = 6060
 const bindAll* = false
 
 type
@@ -25,6 +25,6 @@ const defaultConfig*: TCMConfig = TCMConfig(
   containerDir: configDir / "containers",
   keysDir: configDir / "keys",
   tcmHost: "tcm.thomasnelson.me",
-  tcmApiPort: 6969,
+  tcmApiPort: 6060,
   httpsEnabled: true
 )

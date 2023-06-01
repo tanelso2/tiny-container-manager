@@ -57,6 +57,10 @@ proc eventHandlerSetup*(em: EventManager,
     assertEvent e, evRunCheck
     logInfo("Incrementing run count")
     metrics.incRuns()
+  
+  proc handleCreateContainer(e: Event) {.async.} =
+    assertEvent e, evCreateContainer
+    await cc.ensureDiscardResults()
 
   em.registerHandler(evRunCheck, handleIncRunCount)
   em.registerHandler(evRunCheck, handleRunCC)
