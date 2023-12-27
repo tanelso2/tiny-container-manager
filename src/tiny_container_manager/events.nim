@@ -54,5 +54,5 @@ proc triggerRepeat*(manager: EventManager, e: Event,
     await manager.triggerEvent(e)
   asyncCheck asyncLoop(f, sleepSeconds)
 
-proc newEvent*(kind: EventKind): Event =
-  Event(kind: kind)
+proc newRunCheckEvent*(): Event =
+  Event(kind: evRunCheck)

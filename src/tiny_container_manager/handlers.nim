@@ -14,11 +14,11 @@ import
   nim_utils/logline
 
 proc eventEmitterSetup*(em: EventManager) {.async.} =
-  asyncCheck em.triggerRepeat(newEvent(evUpdateProcMetrics), 15)
-  asyncCheck em.triggerRepeat(newEvent(evFlushStdout), 5)
-  asyncCheck em.triggerRepeat(newEvent(evCleanLEBackups), 300)
-  asyncCheck em.triggerRepeat(newEvent(evRunCheck), 5)
-  asyncCheck em.triggerRepeat(newEvent(evTest), 15)
+  asyncCheck em.triggerRepeat(Event(kind: evUpdateProcMetrics), 15)
+  asyncCheck em.triggerRepeat(Event(kind: evFlushStdout), 5)
+  asyncCheck em.triggerRepeat(Event(kind: evCleanLEBackups), 300)
+  asyncCheck em.triggerRepeat(Event(kind: evRunCheck), 5)
+  asyncCheck em.triggerRepeat(Event(kind: evTest), 15)
 
 proc eventHandlerSetup*(em: EventManager,
                         cc: ContainersCollection,

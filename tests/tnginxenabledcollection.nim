@@ -15,7 +15,8 @@ import
   ],
   test_utils/[
     collection_testing,
-  ]
+  ],
+  unittest
 
 
 proc mkMockLink(enabledDir: string, targetDir: string): EnabledLink =
@@ -35,20 +36,20 @@ block CreateOneIdempotent:
   nec.mkExpected @[mockSymlink]
 
   let startingState = waitFor nec.getWorldState()
-  assert len(startingState) == 0
+  check len(startingState) == 0
   let changes = waitFor nec.ensure()
-  assert len(changes.added) == 1
-  assert len(changes.removed) == 0
+  check len(changes.added) == 1
+  check len(changes.removed) == 0
   let endState = waitFor nec.getWorldState()
   logDebug fmt"nec.enabledDir: {nec.enabledDir}"
   logDebug fmt"endState: {endState}"
-  assert len(endState) == 1
+  check len(endState) == 1
 
   let changes2 = waitFor nec.ensure()
-  assert len(changes2.removed) == 0
-  assert len(changes2.added) == 0
+  check len(changes2.removed) == 0
+  check len(changes2.added) == 0
   let endState2 = waitFor nec.getWorldState()
-  assert len(endState2) == 1
+  check len(endState2) == 1
 
 block RemoveOne:
   let tmpDir = createTempDir("","")
@@ -59,11 +60,11 @@ block RemoveOne:
   extraFile.createFile
 
   let startingState = waitFor nec.getWorldState()
-  assert len(startingState) == 1
+  check len(startingState) == 1
   let changes = waitFor nec.ensure()
-  assert len(changes.added) == 0
-  assert len(changes.removed) == 1
+  check len(changes.added) == 0
+  check len(changes.removed) == 1
   let endState = waitFor nec.getWorldState()
-  assert len(endState) == 0
+  check len(endState) == 0
 
 

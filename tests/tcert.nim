@@ -1,3 +1,6 @@
+discard """
+"""
+
 import
     std/re,
     strutils,

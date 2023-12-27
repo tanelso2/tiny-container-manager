@@ -7,6 +7,7 @@ import
     files,
     logline
   ],
+  macros,
   asyncdispatch,
   httpclient,
   os,
@@ -18,16 +19,25 @@ import
   strutils,
   yanyl
 
-# TODO: Figure out difference between object and ref object.
-# I have read the docs before and I still don't get it
 type
-  Container* = object of RootObj
+  MountKind* = enum
+    mkHostDir = "hostdir"
+  Mount* = object
+    mountPoint*: string
+    case kind*: MountKind
+    of mkHostDir:
+      hostDir*: string
+  Container* = ref object of RootObj
     name*: string
     image*: string
     containerPort*: int
     host*: string
+    mounts*: seq[Mount]
 
-deriveYaml Container
+deriveYamls:
+  MountKind
+  Mount
+  Container
 
 proc matches*(target: Container, d: DContainer): bool =
   # Names are prefaced by a slash due to docker internals
@@ -71,6 +81,20 @@ proc removeContainer*(dc: DContainer) {.async.} =
   await dc.tryStopContainer()
   await dc.tryRemoveContainer()
 
+proc mountParams(target: Container): string =
+  result = ""
+  for m in target.mounts:
+    case m.kind
+    of mkHostDir:
+      result.add("-v {m.hostDir}:{m.mountPoint} ")
+
+proc createContainerCmd*(target: Container): string =
+  let portArgs = fmt"-p {target.containerPort}"
+  let mountArgs = target.mountParams()
+  let cmd = fmt"docker run --name {target.name} -d {portArgs} {mountArgs}{target.image}"
+  cmd
+
+
 proc createContainer*(target: Container) {.async.} =
   logDebug fmt"Trying to create container {target.name}"
   await target.tryStopContainer()
@@ -79,7 +103,8 @@ proc createContainer*(target: Container) {.async.} =
   logInfo pullCmd
   logInfo await pullCmd.asyncExec()
   let portArgs = fmt"-p {target.containerPort}"
-  let cmd = fmt"docker run --name {target.name} -d {portArgs} {target.image}"
+  let mountArgs = target.mountParams()
+  let cmd = target.createContainerCmd()
   logInfo cmd
   logInfo await cmd.asyncExec()
   {.gcsafe.}: metrics.containerStarts.labels(target.name).inc()
@@ -144,9 +169,8 @@ proc isWebsiteRunning*(target: Container): bool =
 
 proc parseContainer*(filename: string): Container =
   {.gcsafe.}:
-    var s = newFileStream(filename)
-    defer: s.close()
-    s.loadNode().ofYaml(Container)
+    var s = readFile(filename)
+    s.ofYamlStr(Container)
 
 proc isConfigFile(filename: string): bool =
   result = filename.endsWith(".yaml") or filename.endsWith(".yml")
