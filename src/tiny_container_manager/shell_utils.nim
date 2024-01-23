@@ -93,6 +93,7 @@ proc setupFirewall*() {.async.} =
   discard await asyncExec("ufw allow ssh")
   discard await asyncExec("ufw allow http")
   discard await asyncExec("ufw allow https")
+  discard await asyncExec("ufw allow 9100") # node_exporter
   if config.bindAll:
     discard await asyncExec(fmt"ufw allow {config.tcmApiPort}")
   discard await asyncExec("ufw enable")
