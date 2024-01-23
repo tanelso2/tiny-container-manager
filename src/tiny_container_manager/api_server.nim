@@ -68,7 +68,7 @@ router application:
         respOk
 
 proc runServer* =
-  let portNum = 6969
+  let portNum = config.tcmApiPort
   let port = Port(portNum)
   let bindAddr = if config.bindAll: "0.0.0.0" else: "127.0.0.1"
   if config.bindAll:
