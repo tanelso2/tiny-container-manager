@@ -73,6 +73,7 @@ Vagrant.configure("2") do |config|
     cd /tcm
     sudo ./deployment/install-nim.sh
     sudo ./deployment/install.sh --skip-gcr
+    git config --global --add safe.directory /tcm
   SHELL
 
   config.vm.provision "shell", inline: <<-SHELL
