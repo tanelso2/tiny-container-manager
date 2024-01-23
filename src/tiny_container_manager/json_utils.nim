@@ -7,11 +7,11 @@ import
 export yaml
 
 proc jsonDump*[T](t: T, s: Stream) =
-  dump(t, s, options = defineOptions(style = psJson))
+  jsonDumper().dump(t, s)
 
 proc jsonDump*[T](t: T): string =
   {.gcsafe.}:
-    dump(t, options = defineOptions(style = psJson))
+    jsonDumper().dump(t)
 
 proc jsonBody*[T](r: jester.request.Request, t: typedesc[T]): T =
   let jsonNode = parseJson(r.body)
