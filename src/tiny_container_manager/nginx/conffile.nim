@@ -160,8 +160,8 @@ proc requestCert*(target: NginxConfig) {.async.} =
   let allHosts = target.allHosts
   let hostCmdLine = allHosts.map((x) => fmt"-d {x}").join(" ")
   let certbotCmd = fmt"certbot certonly --nginx -n --keep {hostCmdLine} --email {config.email} --agree-tos"
-  echo certbotCmd
-  echo await certbotCmd.asyncExec()
+  logInfo certbotCmd
+  logInfo await certbotCmd.asyncExec()
 
 proc createInDir*(target: NginxConfig, dir: string, useHttps: bool) {.async.} =
   logInfo fmt"Creating nginx config for {target.name}"

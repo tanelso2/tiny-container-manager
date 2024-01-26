@@ -81,9 +81,23 @@ proc parseCerts*(s: string): seq[Cert] =
   let certs = s.findAll(certbotCertRegex)
   return certs.mapIt(parseCert(it))
 
+var previousCertbotCertsOutput: seq[Cert] = @[]
+
 proc getAllCertbotCerts*(): Future[seq[Cert]] {.async.} =
-  let output = await "certbot certificates".asyncExec()
-  return output.parseCerts()
+  try:
+    logInfo "Running 'certbot certificates'"
+    let output = await "certbot certificates".asyncExec()
+    result = output.parseCerts()
+    previousCertbotCertsOutput = result
+    return result
+  except IoError:
+    let msg = getCurrentExceptionMsg()
+    if msg.contains("Another instance of Certbot is already running."):
+      logError "Couldn't get certs due to other instance of certbot"
+      return previousCertbotCertsOutput
+    else:
+      raise getCurrentException()
+
 
 proc cleanUpLetsEncryptBackups*() =
   let dir = "/var/lib/letsencrypt/backups"
