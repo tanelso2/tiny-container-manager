@@ -26,6 +26,16 @@ template respOk* =
   respText "OK"
 
 router application:
+  before:
+    let path = request.path
+    let reqMethod = request.reqMethod
+    logInfo fmt"{reqMethod} - {path} - START"
+
+  after:
+    let path = request.path
+    let reqMethod = request.reqMethod
+    logInfo fmt"{reqMethod} - {path} - {result.code}"
+
   get "/metrics":
     respText metrics.getOutput()
   get "/containers":

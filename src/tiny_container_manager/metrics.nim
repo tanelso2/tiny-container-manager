@@ -66,6 +66,12 @@ var tcmMemSize* {.global.} = prom.newGauge(
   @[]
 )
 
+var tcmMemPeak* {.global.} = prom.newGauge(
+  "tcm_mem_peak_kb",
+  "",
+  @[]
+)
+
 proc getOutput*(): string =
   #
   # No idea if actually gcsafe, just want compiler to shut up
