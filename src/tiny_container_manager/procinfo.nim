@@ -49,4 +49,5 @@ proc getProcInfo*(): ProcInfo =
 proc updateProcInfoMetrics* =
   let info = getProcInfo()
   tcmMemSize.set(info.memSize)
+  tcmMemPeak.set(info.memPeak)
   tcmOpenFiles.set(info.openFiles)
