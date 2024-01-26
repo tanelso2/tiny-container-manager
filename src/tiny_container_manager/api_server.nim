@@ -32,7 +32,9 @@ router application:
     logInfo fmt"{reqMethod} - {path}"
 
   after:
-    logInfo fmt"{result}"
+    let path = request.path
+    let reqMethod = request.reqMethod
+    logInfo fmt"{reqMethod} - {path} - {result.code}"
 
   get "/metrics":
     respText metrics.getOutput()
