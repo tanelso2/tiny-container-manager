@@ -30,6 +30,10 @@ router application:
     let path = request.path
     let reqMethod = request.reqMethod
     logInfo fmt"{reqMethod} - {path}"
+
+  after:
+    logInfo fmt"{result}"
+
   get "/metrics":
     respText metrics.getOutput()
   get "/containers":
