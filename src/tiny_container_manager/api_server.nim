@@ -29,7 +29,7 @@ router application:
   before:
     let path = request.path
     let reqMethod = request.reqMethod
-    logInfo fmt"{reqMethod} - {path}"
+    logInfo fmt"{reqMethod} - {path} - START"
 
   after:
     let path = request.path
