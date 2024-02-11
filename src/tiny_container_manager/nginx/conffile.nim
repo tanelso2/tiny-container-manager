@@ -51,7 +51,7 @@ proc certMatches(target: NginxConfig, cert: Cert): bool =
   return domains.anyIt(it == host)
 
 proc getInstalledCert(target: NginxConfig): Future[Option[Cert]] {.async.} =
-  let certs = await getAllCertbotCerts()
+  let certs = await getAllCertbotCertsCached()
   let matches = certs.filterIt(certMatches(target, it))
   if len(matches) < 1:
     return none(Cert)

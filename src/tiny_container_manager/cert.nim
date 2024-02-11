@@ -7,6 +7,7 @@ import
     strformat,
     sequtils,
     times,
+    ./cache,
     ./metrics,
     ./shell_utils,
     nim_utils/logline
@@ -109,6 +110,7 @@ proc getAllCertbotCerts*(): Future[seq[Cert]] {.async.} =
     else:
       raise getCurrentException()
 
+let getAllCertbotCertsCached* = mkTimedCache(getAllCertbotCerts, initDuration(seconds = 5))
 
 proc cleanUpLetsEncryptBackups*() =
   let dir = "/var/lib/letsencrypt/backups"
