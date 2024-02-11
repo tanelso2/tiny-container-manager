@@ -2,6 +2,7 @@ import
     asyncdispatch,
     os,
     std/re,
+    std/times,
     strutils,
     strformat,
     sequtils,
@@ -67,12 +68,12 @@ proc parseDomains(s: string): seq[string] =
 proc parseCert(s: string): Cert =
   var x: array[7, string]
   if match(s, certbotCertRegex, x):
-    return Cert(name: x[0], 
-                serial: x[1], 
-                keyType: x[2], 
-                domains: parseDomains(x[3]), 
-                exp: parseExp(x[4]), 
-                certPath: x[5], 
+    return Cert(name: x[0],
+                serial: x[1],
+                keyType: x[2],
+                domains: parseDomains(x[3]),
+                exp: parseExp(x[4]),
+                certPath: x[5],
                 privKeyPath: x[6])
   else:
     raise newException(AssertionDefect, "Shit")
@@ -81,14 +82,24 @@ proc parseCerts*(s: string): seq[Cert] =
   let certs = s.findAll(certbotCertRegex)
   return certs.mapIt(parseCert(it))
 
+# TODO: Abstract this caching logic into a helper function or class
 var previousCertbotCertsOutput: seq[Cert] = @[]
+var previousCertbotCertsTime: DateTime = now() - initDuration(days = 1)
+
+let certbotCertsCacheTime = initDuration(seconds = 5)
 
 proc getAllCertbotCerts*(): Future[seq[Cert]] {.async.} =
+  let currentTime = now()
+  if currentTime <= previousCertbotCertsTime + certbotCertsCacheTime:
+    logDebug "Returning cached value for 'certbot certificates'"
+    return previousCertbotCertsOutput
   try:
+    # TODO?: Maybe read these certs ourselves instead of shelling out to certbot
     logInfo "Running 'certbot certificates'"
     let output = await "certbot certificates".asyncExec()
     result = output.parseCerts()
     previousCertbotCertsOutput = result
+    previousCertbotCertsTime = currentTime
     return result
   except IoError:
     let msg = getCurrentExceptionMsg()
