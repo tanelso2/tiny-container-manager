@@ -83,24 +83,15 @@ proc parseCerts*(s: string): seq[Cert] =
   let certs = s.findAll(certbotCertRegex)
   return certs.mapIt(parseCert(it))
 
-# TODO: Abstract this caching logic into a helper function or class
 var previousCertbotCertsOutput: seq[Cert] = @[]
-var previousCertbotCertsTime: DateTime = now() - initDuration(days = 1)
-
-let certbotCertsCacheTime = initDuration(seconds = 5)
 
 proc getAllCertbotCerts*(): Future[seq[Cert]] {.async.} =
-  let currentTime = now()
-  if currentTime <= previousCertbotCertsTime + certbotCertsCacheTime:
-    logDebug "Returning cached value for 'certbot certificates'"
-    return previousCertbotCertsOutput
   try:
     # TODO?: Maybe read these certs ourselves instead of shelling out to certbot
     logInfo "Running 'certbot certificates'"
     let output = await "certbot certificates".asyncExec()
     result = output.parseCerts()
     previousCertbotCertsOutput = result
-    previousCertbotCertsTime = currentTime
     return result
   except IoError:
     let msg = getCurrentExceptionMsg()
