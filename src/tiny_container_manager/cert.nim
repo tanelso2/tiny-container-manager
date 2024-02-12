@@ -105,7 +105,7 @@ let getAllCertbotCertsCached* = mkTimedCache(getAllCertbotCerts, initDuration(se
 
 proc cleanUpLetsEncryptBackups*() =
   let dir = "/var/lib/letsencrypt/backups"
-  let anHourAgo = getTime() + initTimeInterval(hours = -1)
+  let anHourAgo = getTime() - initDuration(hours = 1)
   var filesDeleted = 0
   for (fileType, path) in walkDir(dir):
     # a < b if a happened before b
