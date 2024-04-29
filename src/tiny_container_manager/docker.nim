@@ -97,12 +97,12 @@ proc getContainer*(name: string): DContainer =
   let resJson = makeRequest(path = &"/containers/{name}/json")
   return to(resJson, DContainer)
 
+proc getContainerStats(idOrName: string) =
+  let resJson = makeRequest(path = &"/containers/{idOrName}/stats")
+  echo fmt"{resJson=}"
+
 proc main() =
-  let socket = getDockerSocket()
-  defer: socket.close()
-  let resp = makeRequest(path = "/containers/json")
-  discard makeRequest(path = "/")
+  getContainerStats("nginx")
 
 when isMainModule:
-  echo getContainers()
   main()
