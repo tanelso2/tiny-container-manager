@@ -6,7 +6,6 @@ import
   ./container_collection,
   ./collection,
   ./procinfo,
-  ./shell_utils,
   nginx/[
     config_collection,
     enabled_collection
@@ -57,7 +56,7 @@ proc eventHandlerSetup*(em: EventManager,
     assertEvent e, evRunCheck
     logInfo("Incrementing run count")
     metrics.incRuns()
-  
+
   proc handleCreateContainer(e: Event) {.async.} =
     assertEvent e, evCreateContainer
     await cc.ensureDiscardResults()
