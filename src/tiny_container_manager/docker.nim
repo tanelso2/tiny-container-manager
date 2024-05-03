@@ -4,6 +4,7 @@ import
   os,
   strutils,
   strformat,
+  std/httpclient,
   tables,
   nim_utils/[
     shell_utils
@@ -65,15 +66,25 @@ proc makeRequest(headers = emptyHeaders(), body: JsonNode = nil, httpMethod = "G
   #
   # Start receive
   let httpLine = s.recvLine(timeout)
+  echo fmt"{httpLine=}"
   let statusCode = httpLine.split(" ")[1]
+  echo fmt"{statusCode=}"
   # TODO: Headers and error handling
   # Read headers
   var chunkedTransfer = false
+  echo fmt"{int('a')=}"
   while true:
+    # let body = s.recv(1_000, timeout=timeout)
+    # echo fmt"{body=}"
     let line = s.recvLine(timeout)
+    echo fmt"{line=}"
+    echo fmt"{line.len=}"
+    if len(line) == 2:
+      for c in line:
+        echo fmt"{int(c)=}"
     if line.contains("Transfer-Encoding") and line.contains("chunked"):
       chunkedTransfer = true
-    if line == httpNewLine:
+    if line == httpNewLine or line == "\r\n":
       break
   var body = ""
   if chunkedTransfer:
@@ -86,6 +97,8 @@ proc makeRequest(headers = emptyHeaders(), body: JsonNode = nil, httpMethod = "G
       # Consume another blank line in between chunks
       discard s.recvLine(timeout)
   else:
+    body = s.recv(10_000, timeout=timeout)
+    echo fmt"{body=}"
     body = s.recvLine(timeout)
   return parseJson(body)
 
@@ -98,11 +111,19 @@ proc getContainer*(name: string): DContainer =
   return to(resJson, DContainer)
 
 proc getContainerStats(idOrName: string) =
-  let resJson = makeRequest(path = &"/containers/{idOrName}/stats")
+  let resJson = makeRequest(path = &"/containers/{idOrName}/stats",
+                            timeout = 2_000)
   echo fmt"{resJson=}"
 
 proc main() =
-  getContainerStats("nginx")
+  echo "Here we go"
+  getContainerStats("personal-website")
 
 when isMainModule:
+  echo getContainers()
+  var client = newHttpClient()
+  try:
+    echo client.getContent(dockerSocketFile)
+  finally:
+    client.close()
   main()
