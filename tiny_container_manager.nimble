@@ -7,7 +7,7 @@ license       = "MIT"
 srcDir        = "src"
 bin           = @["tiny_container_manager"]
 
-const nimVersion = "2.0.2"
+const nimVersion = "2.0.12"
 import strformat
 
 # Dependencies
@@ -17,8 +17,8 @@ requires fmt"nim >= {nimVersion}"
 requires "jester == 0.6.0"
 requires "argparse"
 requires "prometheus"
-requires "https://github.com/tanelso2/nim_utils == 0.4.0"
-requires "yanyl == 1.2.0"
+requires "https://github.com/tanelso2/nim_utils >= 0.4.0"
+requires "yanyl == 1.2.2"
 
 task test, "Runs the test suite":
   exec "nimble build -y && testament p 'tests/*.nim'"

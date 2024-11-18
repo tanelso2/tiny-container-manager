@@ -151,7 +151,7 @@ proc parseContainer*(filename: string): Container =
 proc isConfigFile(filename: string): bool =
   result = filename.endsWith(".yaml") or filename.endsWith(".yml")
 
-proc getContainerConfigs*(directory: string = config.containerDir): seq[Container] =
+proc getContainerConfigs*(directory: string = config.containerDir()): seq[Container] =
   discard directory.existsOrCreateDir
   var containers: seq[Container] = newSeq[Container]()
   for path in walkFiles(fmt"{directory}/*"):
@@ -166,26 +166,26 @@ type
   ErrAlreadyExists* = object of ValueError
   ErrDoesNotExist* = object of OSError
 
-proc deleteNamedContainer*(name: string, dir = config.containerDir) =
+proc deleteNamedContainer*(name: string, dir: string = config.containerDir()) =
   let filename = fmt"{name}.yaml"
   let path = dir / filename
   if not path.fileExists:
     raise newException(ErrDoesNotExist, fmt"{path} doesn't exist")
   path.removePath()
 
-proc writeFile*(c: Container, dir = config.containerDir) =
+proc writeFile*(c: Container, dir = config.containerDir()) =
   let path = dir / c.filename
   var s = newFileStream(path, fmWrite)
   defer: s.close()
   s.write(c.toYaml().toString())
 
-proc add*(c: Container, dir = config.containerDir) =
+proc add*(c: Container, dir = config.containerDir()) =
   let path = dir / c.filename
   if path.fileExists:
     raise newException(ErrAlreadyExists, fmt"{path} already exists")
   c.writeFile()
 
-proc getContainerByName*(name: string, dir = config.containerDir): Option[Container] =
+proc getContainerByName*(name: string, dir = config.containerDir()): Option[Container] =
   let path = dir / fmt"{name}.yaml"
   if not path.fileExists:
     return none(Container)

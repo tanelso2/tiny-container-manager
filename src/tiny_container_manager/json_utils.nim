@@ -22,5 +22,3 @@ template jsonResp*(s: string) =
 
 template jsonResp*[T](t: T) =
   jsonResp jsonDump(t)
-
-

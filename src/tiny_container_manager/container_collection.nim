@@ -11,7 +11,7 @@ type
     dir: string
 
 
-proc newContainersCollection*(dir = config.containerDir):  ContainersCollection =
+proc newContainersCollection*(dir = config.containerDir()):  ContainersCollection =
   proc getExpected(): Future[seq[Container]] {.async.} =
     return getContainerConfigs(dir)
 

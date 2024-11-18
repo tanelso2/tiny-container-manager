@@ -7,7 +7,7 @@ import
   ./config,
   nim_utils/logline
 
-proc getKeys*(dir = config.keysDir): seq[string] =
+proc getKeys*(dir: string = config.keysDir()): seq[string] =
   result = newSeq[string]()
   for (_, path) in walkDir(dir):
     let user = path.extractFilename()

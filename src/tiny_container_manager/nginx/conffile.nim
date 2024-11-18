@@ -26,13 +26,13 @@ type
 
 proc apiConfig*(): NginxConfig =
   let rootCon = ContainerRef(path: "/",
-                             port: config.tcmApiPort,
+                             port: config.tcmApiPort(),
                              container: Container())
   NginxConfig(
     # The 00- ensures that this will be loaded by default 
     # when there is not a complete match on the site name
     name: "00-tcm_api",
-    allHosts: @[config.tcmHost],
+    allHosts: @[config.tcmHost()],
     containers: @[rootCon]
   )
 
@@ -159,7 +159,7 @@ proc compare*(expected: NginxConfig, actual: ActualNginxConfig, useHttps: bool):
 proc requestCert*(target: NginxConfig) {.async.} =
   let allHosts = target.allHosts
   let hostCmdLine = allHosts.map((x) => fmt"-d {x}").join(" ")
-  let certbotCmd = fmt"certbot certonly --nginx -n --keep {hostCmdLine} --email {config.email} --agree-tos"
+  let certbotCmd = fmt"certbot certonly --nginx -n --keep {hostCmdLine} --email {config.email()} --agree-tos"
   logInfo certbotCmd
   logInfo await certbotCmd.asyncExec()
 

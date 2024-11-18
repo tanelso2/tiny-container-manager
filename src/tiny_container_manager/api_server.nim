@@ -78,12 +78,14 @@ router application:
         respOk
 
 proc runServer* =
-  let portNum = config.tcmApiPort
+  let host = config.tcmHost()
+  let portNum = config.tcmApiPort()
   let port = Port(portNum)
-  let bindAddr = if config.bindAll: "0.0.0.0" else: "127.0.0.1"
-  if config.bindAll:
+  let bindAddr = if config.bindAll(): "0.0.0.0" else: "127.0.0.1"
+  if config.bindAll():
     logWarn fmt"Binding to all addresses at {bindAddr}"
-  logInfo fmt"Starting server at {bindAddr}"
+  logInfo fmt"Starting server at {bindAddr}:{portNum}"
+  logInfo fmt"Listening for API connections at {host}"
   let settings = newSettings(port=port, bindAddr=bindAddr)
   var jester = initJester(application, settings=settings)
   jester.serve()
