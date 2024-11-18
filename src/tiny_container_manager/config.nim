@@ -1,30 +1,127 @@
-import 
-  os
+import
+  os,
+  std/options,
+  std/strutils,
+  std/sugar,
+  std/tables,
+  nim_utils/logline,
+  yanyl
 
-const email* = "tanelso2@gmail.com"
-const configDir* = "/opt/tiny-container-manager"
-const containerDir* = configDir / "containers"
-const keysDir* = configDir / "keys"
-const tcmHost* = "tcm.thomasnelson.me"
-const tcmApiPort* = 6060
-const bindAll* = false
+const defaultConfigFile* = "/opt/tiny-container-manager/config.yaml"
+var defaultConfigFileCache = none(YNode)
+proc fileConfig(): YNode =
+  if defaultConfigFileCache.isNone():
+    let f = open(defaultConfigFile)
+    defer: f.close()
+    let content = f.readAll()
+    result = content.loadNode()
+    defaultConfigFileCache = some result
+  else:
+    result = defaultConfigFileCache.get()
 
 type
-  TCMConfig* = object
-    email*: string
-    configDir*: string
-    containerDir*: string
-    keysDir*: string
-    tcmHost*: string
-    tcmApiPort*: int
-    httpsEnabled*: bool
+  ConfigOption*[T] = object of RootObj
+    envVariable: Option[string]
+    configFileProperty: Option[string]
+    defaultValue: Option[T]
+    parser: string -> T
+  StringOpt* = ConfigOption[string]
+  IntOpt* = ConfigOption[int]
+  BoolOpt* = ConfigOption[bool]
 
-const defaultConfig*: TCMConfig = TCMConfig(
-  email: "tanelso2@gmail.com",
-  configDir: "/opt/tiny-container-manager",
-  containerDir: configDir / "containers",
-  keysDir: configDir / "keys",
-  tcmHost: "tcm.thomasnelson.me",
-  tcmApiPort: 6060,
-  httpsEnabled: true
-)
+proc id[T](x: T): T = x
+
+proc contains(n: YNode, k: string): bool =
+  expectYMap n:
+    result = k in n.mapVal
+
+proc stringOpt*(env: Option[string] = none(string), fileProperty = none(string), defaultValue = none(string)): StringOpt =
+  return ConfigOption[string](envVariable : env,
+                              configFileProperty : fileProperty,
+                              defaultValue : defaultValue,
+                              parser : id)
+
+proc intOpt*(env: Option[string] = none(string), fileProperty = none(string), defaultValue = none(int)): IntOpt =
+  return ConfigOption[int](envVariable: env,
+                           configFileProperty: fileProperty,
+                           defaultValue: defaultValue,
+                           parser: parseInt)
+
+proc boolOpt*(env = none(string), fileProperty = none(string), defaultValue = none(bool)): BoolOpt =
+  return ConfigOption[bool](envVariable: env,
+                            configFileProperty: fileProperty,
+                            defaultValue: defaultValue,
+                            parser: parseBool)
+
+proc get*[T](opt: ConfigOption[T]): Option[T] =
+  result = none(T)
+  if opt.envVariable.isSome() and result.isNone():
+    let envVar = opt.envVariable.get()
+    if existsEnv(envVar):
+      let val = getEnv(envVar)
+      result = some(opt.parser(val))
+  if opt.configFileProperty.isSome() and result.isNone():
+    if fileExists(defaultConfigFile):
+      let configResult = fileConfig()
+      let prop = opt.configFileProperty.get()
+      if prop in configResult:
+        let val = configResult.getStr(prop)
+        result = some(opt.parser(val))
+  if opt.defaultValue.isSome() and result.isNone():
+    result = opt.defaultValue
+
+type
+  TCMConfigOptions* = object
+    email*: StringOpt = stringOpt(env = some("TCM_EMAIL"),
+                                  fileProperty = some("email"),
+                                  defaultValue = some("example@example.com"))
+    configDir*: StringOpt = stringOpt(env = some "TCM_CONFIG_DIR",
+                                      fileProperty = some("configDir"),
+                                      defaultValue = some("/opt/tiny-container-manager"))
+    host*: StringOpt = stringOpt(env = some "TCM_HOST",
+                                 fileProperty = some "host",
+                                 defaultValue = some "tcm.example.com")
+    apiPort*: IntOpt = intOpt(env = some "TCM_API_PORT",
+                              fileProperty = some "apiPort",
+                              defaultValue = some 6060)
+    httpsEnabled*: BoolOpt = boolOpt(env = some "TCM_HTTPS_ENABLED",
+                                     fileProperty = some "httpsEnabled",
+                                     defaultValue = some true)
+    bindAll*: BoolOpt = boolOpt(env = some "TCM_BIND_ALL",
+                                fileProperty = some "bindAll",
+                                defaultValue = some false)
+
+let
+  opts = TCMConfigOptions()
+
+proc email*(): string =
+  {.gcsafe.}:
+    opts.email.get.get()
+
+proc configDir*(): string =
+  {.gcsafe.}:
+    opts.configDir.get().get()
+
+proc keysDir*(): string =
+  {.gcsafe.}:
+    configDir() / "keys"
+
+proc containerDir*(): string =
+  {.gcsafe.}:
+    configDir() / "containers"
+
+proc tcmHost*(): string =
+  {.gcsafe.}:
+    result = opts.host.get().get()
+
+proc tcmApiPort*(): int =
+  {.gcsafe.}:
+    opts.apiPort.get().get()
+
+proc httpsEnabled*(): bool =
+  {.gcsafe.}:
+    opts.httpsEnabled.get().get()
+
+proc bindAll*(): bool =
+  {.gcsafe.}:
+    opts.bindAll.get().get()

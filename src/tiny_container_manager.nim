@@ -56,7 +56,7 @@ proc startTcm(disableSetup = false, useHttps = true) {.async.} =
 
 import argparse
 var p = newParser:
-  flag("--no-management", help="Run the API server only")
+  flag("--disable-management", help="Run the API server only")
   flag("--disable-setup", help="Disable the setup (installing packages) and run the tcm tasks")
   flag("--disable-https", help="Disable https")
   flag("-d", "--debug", help="Enable debug messaging")
@@ -72,13 +72,13 @@ proc main() =
   var opts = p.parse(commandLineParams())
 
   let disableSetup = opts.disable_setup
-  let useHttps = not opts.disable_https and defaultConfig.httpsEnabled
+  let useHttps = not opts.disable_https and config.httpsEnabled()
   if opts.debug:
     debugMode = true
     setLogFilter(lvlDebug)
   else:
     setLogFilter(lvlInfo)
-  if opts.no_management:
+  if opts.disable_management:
     logWarn "No management mode enabled, not starting the main tcm tasks"
   else:
     asyncCheck startTcm(disableSetup=disableSetup, useHttps=useHttps)
