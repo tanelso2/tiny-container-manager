@@ -32,8 +32,8 @@ type
 proc id[T](x: T): T = x
 
 proc contains(n: YNode, k: string): bool =
-  expectYMap n:
-    result = k in n.mapVal
+  assertYMap n
+  return k in n.mapVal
 
 proc stringOpt*(env: Option[string] = none(string), fileProperty = none(string), defaultValue = none(string)): StringOpt =
   return ConfigOption[string](envVariable : env,
@@ -96,32 +96,30 @@ let
 
 proc email*(): string =
   {.gcsafe.}:
-    opts.email.get.get()
+    return opts.email.get().get()
 
 proc configDir*(): string =
   {.gcsafe.}:
-    opts.configDir.get().get()
+    return opts.configDir.get().get()
 
 proc keysDir*(): string =
-  {.gcsafe.}:
-    configDir() / "keys"
+  configDir() / "keys"
 
 proc containerDir*(): string =
-  {.gcsafe.}:
-    configDir() / "containers"
+  configDir() / "containers"
 
 proc tcmHost*(): string =
   {.gcsafe.}:
-    result = opts.host.get().get()
+    return opts.host.get().get()
 
 proc tcmApiPort*(): int =
   {.gcsafe.}:
-    opts.apiPort.get().get()
+    return opts.apiPort.get().get()
 
 proc httpsEnabled*(): bool =
   {.gcsafe.}:
-    opts.httpsEnabled.get().get()
+    return opts.httpsEnabled.get().get()
 
 proc bindAll*(): bool =
   {.gcsafe.}:
-    opts.bindAll.get().get()
+    return opts.bindAll.get().get()
