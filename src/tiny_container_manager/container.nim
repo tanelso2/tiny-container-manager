@@ -95,10 +95,10 @@ proc runningContainer*(target: Container): Option[DContainer] =
 proc getRunningContainer*(target: Container): DContainer =
   return target.runningContainer.get()
 
-proc localPort*(c: DContainer): int =
+proc localPort*(c: DContainer): Option[int] =
   return c.Ports[0].PublicPort
 
-proc localPort*(target: Container): int =
+proc localPort*(target: Container): Option[int] =
   let c = target.getRunningContainer()
   return c.localPort
 

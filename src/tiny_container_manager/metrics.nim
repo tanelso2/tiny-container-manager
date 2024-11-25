@@ -36,6 +36,24 @@ var nginxConfigsWritten* {.global.} = prom.newCounter(
   @["site"]
 )
 
+var containerCPUPerc* {.global.} = prom.newGauge(
+  "tcm_container_cpu_perc",
+  "",
+  @["site"]
+)
+
+var containerMemPerc* {.global.} = prom.newGauge(
+  "tcm_container_mem_perc",
+  "",
+  @["site"]
+)
+
+var containerPIDs* {.global.} = prom.newGauge(
+  "tcm_container_pids",
+  "",
+  @["site"]
+)
+
 var letsEncryptBackupsDeleted* {.global.} = prom.newCounter(
   "tcm_letsencrypt_backups_deleted",
   "",
@@ -79,6 +97,9 @@ proc getOutput*(): string =
   # If I'm worried about thread safety of the metrics variables,
   # maybe I should switch to using a gc strategy that has a shared heap?
   # https://nim-lang.org/docs/gc.html
+  #
+  # UPDATE 2024-11-25 - I am using a gc strategy with a shared heap due to being on Nim 2.x
+  # It hasn't segfaulted yet!
   #
   {.gcsafe.}:
     return prom.generateLatest()

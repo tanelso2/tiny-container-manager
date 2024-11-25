@@ -1,10 +1,11 @@
 import
   asyncdispatch,
   ./cert,
+  ./collection,
+  ./container_collection,
+  ./docker,
   ./events,
   ./metrics,
-  ./container_collection,
-  ./collection,
   ./procinfo,
   nginx/[
     config_collection,
@@ -70,5 +71,6 @@ proc eventHandlerSetup*(em: EventManager,
     assertEvent e, evUpdateProcMetrics
     logInfo "Updating metrics"
     updateProcInfoMetrics()
+    await observeDockerStats()
 
   em.registerHandler(evUpdateProcMetrics, handleMetricsUpdate)

@@ -1,11 +1,18 @@
 import
+  asyncdispatch,
   json,
   net,
+  options,
   os,
   strutils,
   strformat,
   tables,
   nim_utils/[
+    logline,
+    shell_utils
+  ],
+  ./[
+    metrics,
     shell_utils
   ]
 
@@ -17,8 +24,28 @@ type
     Names*: seq[string]
   DPort* = object
     PrivatePort*: int
-    PublicPort*: int
+    PublicPort*: Option[int]
     Type*: string
+  DContainerStats* = object
+    memory_stats*: MemoryStats
+  MemoryStats* = object
+    usage*: int
+  DockerCLIStatsRaw* = object
+    BlockIO*: string
+    CPUPerc*: string
+    Container*: string
+    ID*: string
+    MemPerc*: string
+    MemUsage*: string
+    Name*: string
+    NetIO*: string
+    PIDs*: string
+  DockerCLIStats* = object
+    CPUPerc*: float
+    ID*: string
+    Name*: string
+    MemPerc*: float
+    PIDs*: int
 
 type
   Headers* = Table[string, string]
@@ -91,11 +118,44 @@ proc makeRequest(headers = emptyHeaders(), body: JsonNode = nil, httpMethod = "G
 
 proc getContainers*(): seq[DContainer] =
   let resJson = makeRequest(path = "/containers/json")
+  logInfo $resJson
   return to(resJson, seq[DContainer])
 
 proc getContainer*(name: string): DContainer =
   let resJson = makeRequest(path = &"/containers/{name}/json")
   return to(resJson, DContainer)
+
+proc getContainerStats*(name: string, oneShot = true) =
+  let resJson = makeRequest(path = &"/containers/{name}/stats?stream=false&one-shot={oneShot}")
+  logInfo $resJson
+  logDebug $to(resJson, DContainerStats)
+
+proc parsePercent(s: string): float =
+  parseFloat(s[0..^2]) # Remove last character
+
+proc convert(r: DockerCLIStatsRaw): DockerCLIStats =
+  DockerCLIStats(
+    CPUPerc: parsePercent(r.CPUPerc),
+    ID: r.ID,
+    Name: r.Name,
+    MemPerc: parsePercent(r.MemPerc),
+    PIDs: parseInt(r.PIDs)
+  )
+
+proc getDockerCLIStats*(): Future[seq[DockerCLIStats]] {.async.} =
+  let cmd = "docker stats --format json --no-stream"
+  let res = (await cmd.asyncExec()).strip()
+  result = @[]
+  for r in res.splitLines():
+    let stats = r.parseJson().to(DockerCLIStatsRaw).convert()
+    result.add(stats)
+
+proc observeDockerStats*() {.async.} =
+  let stats = await getDockerCLIStats()
+  for s in stats:
+    metrics.containerCPUPerc.labels(s.Name).set(s.CPUPerc)
+    metrics.containerMemPerc.labels(s.Name).set(s.MemPerc)
+    metrics.containerPIDs.labels(s.Name).set(s.PIDs)
 
 proc main() =
   let socket = getDockerSocket()
@@ -104,5 +164,9 @@ proc main() =
   discard makeRequest(path = "/")
 
 when isMainModule:
-  echo getContainers()
-  main()
+  #echo getContainers()
+  #getContainerStats("nginx")
+  logInfo $(waitFor getDockerCLIStats())
+  waitFor observeDockerStats()
+  logInfo metrics.getOutput()
+  # main()

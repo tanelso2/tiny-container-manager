@@ -25,7 +25,7 @@ proc getNginxConfigsForContainers(containers: seq[Container]): seq[NginxConfig] 
       let rc = c.runningContainer
       # Only enable nginx for running containers
       if rc.isSome():
-        let port = rc.get().localPort
+        let port = rc.get().localPort.get()
         NginxConfig(name: c.name, allHosts: c.allHosts, containers: @[ContainerRef(path: "/", container: c, port: port)])
 
   result.add(apiConfig())
