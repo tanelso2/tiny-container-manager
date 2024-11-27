@@ -118,7 +118,7 @@ proc makeRequest(headers = emptyHeaders(), body: JsonNode = nil, httpMethod = "G
 
 proc getContainers*(): seq[DContainer] =
   let resJson = makeRequest(path = "/containers/json")
-  logInfo $resJson
+  #logInfo $resJson
   return to(resJson, seq[DContainer])
 
 proc getContainer*(name: string): DContainer =
@@ -126,6 +126,7 @@ proc getContainer*(name: string): DContainer =
   return to(resJson, DContainer)
 
 proc getContainerStats*(name: string, oneShot = true) =
+  # Unfinished - using docker stats CLI instead
   let resJson = makeRequest(path = &"/containers/{name}/stats?stream=false&one-shot={oneShot}")
   logInfo $resJson
   logDebug $to(resJson, DContainerStats)
