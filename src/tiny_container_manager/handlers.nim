@@ -71,6 +71,6 @@ proc eventHandlerSetup*(em: EventManager,
     assertEvent e, evUpdateProcMetrics
     logInfo "Updating metrics"
     updateProcInfoMetrics()
-    await observeDockerStats()
+    observeDockerStats()
 
   em.registerHandler(evUpdateProcMetrics, handleMetricsUpdate)

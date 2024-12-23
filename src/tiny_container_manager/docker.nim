@@ -27,9 +27,24 @@ type
     PublicPort*: Option[int]
     Type*: string
   DContainerStats* = object
+    cpu_stats*: CPUStats
+    precpu_stats*: CPUStats
     memory_stats*: MemoryStats
+    pids_stats*: PIDStats
+  PIDStats* = object
+    current*: int
+  CPUStats* = object
+    system_cpu_usage*: int
+    online_cpus*: int
+    cpu_usage*: CPUUsage
+  CPUUsage* = object
+    total_usage*: int
   MemoryStats* = object
     usage*: int
+    limit*: int
+    stats*: MemoryStatsDetailed
+  MemoryStatsDetailed* = object
+    inactive_file*: int
   DockerCLIStatsRaw* = object
     BlockIO*: string
     CPUPerc*: string
@@ -43,6 +58,11 @@ type
   DockerCLIStats* = object
     CPUPerc*: float
     ID*: string
+    Name*: string
+    MemPerc*: float
+    PIDs*: int
+  DockerStats* = object
+    CPUPerc*: float
     Name*: string
     MemPerc*: float
     PIDs*: int
@@ -92,7 +112,9 @@ proc makeRequest(headers = emptyHeaders(), body: JsonNode = nil, httpMethod = "G
   #
   # Start receive
   let httpLine = s.recvLine(timeout)
-  let statusCode = httpLine.split(" ")[1]
+  let statusCode: int = parseInt(httpLine.split(" ")[1])
+  if statusCode != 200:
+    logWarn fmt"Failed to fetch {path}. Status code: {statusCode}"
   # TODO: Headers and error handling
   # Read headers
   var chunkedTransfer = false
@@ -125,11 +147,39 @@ proc getContainer*(name: string): DContainer =
   let resJson = makeRequest(path = &"/containers/{name}/json")
   return to(resJson, DContainer)
 
-proc getContainerStats*(name: string, oneShot = true) =
-  # Unfinished - using docker stats CLI instead
-  let resJson = makeRequest(path = &"/containers/{name}/stats?stream=false&one-shot={oneShot}")
-  logInfo $resJson
-  logDebug $to(resJson, DContainerStats)
+proc getContainerStats*(name: string, oneShot = false): Option[DockerStats] =
+  try:
+    let resJson = makeRequest(path = &"/containers/{name}/stats?stream=false&one-shot={oneShot}")
+    # logInfo $resJson
+    # logInfo $resJson["cpu_stats"]
+    # logInfo $resJson["precpu_stats"]
+    # logInfo $resJson["memory_stats"]
+    # logInfo $to(resJson["cpu_stats"], CPUStats)
+    let data = to(resJson, DContainerStats)
+    # Conversion between API and CLI stats provided by:
+    # https://docs.docker.com/reference/api/engine/version/v1.47/#tag/Container/operation/ContainerStats
+    # These instructions aren't accurate to the most recent version of Docker though.
+    # percpu_stats no longer exists, need to use online_cpus instead
+    # memory_stats.stats.cache does not exist anymore, need to use inactive_file instead
+    let
+      used_memory = data.memory_stats.usage - data.memory_stats.stats.inactive_file
+      available_memory = data.memory_stats.limit
+      memory_usage_percent = float(used_memory / available_memory) * 100.0
+      cpu_delta = data.cpu_stats.cpu_usage.total_usage - data.precpu_stats.cpu_usage.total_usage
+      system_cpu_delta = data.cpu_stats.system_cpu_usage - data.precpu_stats.system_cpu_usage
+      number_cpus = data.cpu_stats.online_cpus
+      cpu_usage_percent = (cpu_delta / system_cpu_delta) * float(number_cpus) * 100.0
+      pids = data.pids_stats.current
+    return some(DockerStats(
+      CPUPerc: cpu_usage_percent,
+      Name: name,
+      MemPerc: memory_usage_percent,
+      PIDs: pids
+    ))
+  except:
+    let e = getCurrentException()
+    logError fmt"Failed to fetch container stats. Error message: {e.msg}"
+    return none(DockerStats)
 
 proc parsePercent(s: string): float =
   parseFloat(s[0..^2]) # Remove last character
@@ -151,8 +201,22 @@ proc getDockerCLIStats*(): Future[seq[DockerCLIStats]] {.async.} =
     let stats = r.parseJson().to(DockerCLIStatsRaw).convert()
     result.add(stats)
 
-proc observeDockerStats*() {.async.} =
-  let stats = await getDockerCLIStats()
+proc getDockerStats*(): seq[DockerStats] =
+  let containers = getContainers()
+  result = @[]
+  for c in containers:
+    var name = c.Names[0]
+    if name.startsWith('/'):
+      name = name[1..^1]
+    let stats = getContainerStats(name)
+    if stats.isSome():
+      result.add(stats.get())
+    else:
+      logError fmt"Unable to get container stats for container {name}"
+
+
+proc observeDockerStats*() =
+  let stats = getDockerStats()
   for s in stats:
     metrics.containerCPUPerc.labels(s.Name).set(s.CPUPerc)
     metrics.containerMemPerc.labels(s.Name).set(s.MemPerc)
@@ -166,8 +230,9 @@ proc main() =
 
 when isMainModule:
   #echo getContainers()
-  #getContainerStats("nginx")
-  logInfo $(waitFor getDockerCLIStats())
-  waitFor observeDockerStats()
+  # logInfo $getContainerStats("nginx")
+  # logInfo $(waitFor getDockerCLIStats())
+  logInfo $getDockerStats()
+  observeDockerStats()
   logInfo metrics.getOutput()
   # main()
