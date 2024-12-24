@@ -1,0 +1,53 @@
+# This is a basic workflow to help you get started with Actions
+
+name: Release
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push or pull request events but only for the "main" branch
+  push:
+    branches: [ "main" ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v3
+
+      # Runs a single command using the runners shell
+      - name: Install Nim
+        # You may pin to the exact commit or the version.
+        # uses: iffy/install-nim@7dd1812db4916d00b984d1c43339346a76e05487
+        uses: iffy/install-nim@v4.1.3
+        # with:
+          #  version: # optional, default is stable
+      # Runs a set of commands using the runners shell
+      # We need to run build first, otherwise the tests do not work properly...
+      # I should probably fix that, because that means the tests might lag behind
+      # because they are using old builds :grimacing:
+      - name: Nimble refresh
+        run: |
+          nimble refresh -y
+      - name: Nimble build
+        run: |
+          nimble build
+      - name: Nimble test
+        run: |
+          nimble test
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: tiny_container_manager
+          fail_on_unmatched_files: true
+          generate_release_notes: true
+          tag_name: release-${{ github.ref }}
+
