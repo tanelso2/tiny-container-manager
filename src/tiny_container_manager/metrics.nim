@@ -1,5 +1,6 @@
 import
-  prometheus as prom
+  prometheus as prom,
+  nim_utils/logline
 
 export prom
 
@@ -39,19 +40,26 @@ var nginxConfigsWritten* {.global.} = prom.newCounter(
 var containerCPUPerc* {.global.} = prom.newGauge(
   "tcm_container_cpu_perc",
   "",
-  @["site"]
+  labelNames = @["site"]
 )
 
 var containerMemPerc* {.global.} = prom.newGauge(
   "tcm_container_mem_perc",
   "",
-  @["site"]
+  labelNames = @["site"]
+)
+
+var containerMemBytes* {.global.} = prom.newGauge(
+  "tcm_container_mem_bytes",
+  "",
+  labelNames = @["site"],
+  unit = Unit.Bytes
 )
 
 var containerPIDs* {.global.} = prom.newGauge(
   "tcm_container_pids",
   "",
-  @["site"]
+  labelNames = @["site"]
 )
 
 var letsEncryptBackupsDeleted* {.global.} = prom.newCounter(

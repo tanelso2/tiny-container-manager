@@ -64,6 +64,7 @@ type
   DockerStats* = object
     CPUPerc*: float
     Name*: string
+    MemBytes*: int
     MemPerc*: float
     PIDs*: int
 
@@ -173,6 +174,7 @@ proc getContainerStats*(name: string, oneShot = false): Option[DockerStats] =
     return some(DockerStats(
       CPUPerc: cpu_usage_percent,
       Name: name,
+      MemBytes: used_memory,
       MemPerc: memory_usage_percent,
       PIDs: pids
     ))
@@ -220,6 +222,7 @@ proc observeDockerStats*() =
   for s in stats:
     metrics.containerCPUPerc.labels(s.Name).set(s.CPUPerc)
     metrics.containerMemPerc.labels(s.Name).set(s.MemPerc)
+    metrics.containerMemBytes.labels(s.Name).set(s.MemBytes)
     metrics.containerPIDs.labels(s.Name).set(s.PIDs)
 
 proc main() =
@@ -230,7 +233,7 @@ proc main() =
 
 when isMainModule:
   #echo getContainers()
-  # logInfo $getContainerStats("nginx")
+  logInfo $getContainerStats("nginx")
   # logInfo $(waitFor getDockerCLIStats())
   logInfo $getDockerStats()
   observeDockerStats()
